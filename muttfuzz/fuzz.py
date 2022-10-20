@@ -1,5 +1,6 @@
 import argparse
 from collections import namedtuple
+import sys
 
 import fuzzutil
 
