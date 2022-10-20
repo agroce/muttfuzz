@@ -1,14 +1,16 @@
 import random
 import subprocess
 
-JUMPS = ["je", "jne", "jl", "jle", "jg", "jge"]
-SHORT_JUMPS = list(map(bytes.fromhex, ["74", "75", "7C", "7D", "7E", "7F"]))
+JUMP_OPCODES = ["je", "jne", "jl", "jle", "jg", "jge"]
+SHORT_JUMPS = list(map(bytes.fromhex, ["74", "75", "7C", "7D", "7E", "7F", "EB"]))
+# no unconditional for near jumps, since changes opcode length, not worth it
 NEAR_JUMPS = list(map(bytes.fromhex, ["0F 84", "0F 85", "0F 8C", "0F 8D", "0F 8E", "0F 8F"]))
 
 def get_jumps(filename):
     jumps = {}
 
-    proc = subprocess.Popen(["objdump", "-d", "--file-offsets", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(["objdump", "-d", "--file-offsets", filename],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
     output = str(out, encoding="utf-8")
 
@@ -16,14 +18,12 @@ def get_jumps(filename):
         if "File Offset" in line and line[-1] == ":":
             offset_hex = line.split("File Offset:")[1].split(")")[0]
             section_offset = int(offset_hex, 16)
-            print("SECTION OFFSET:", section_offset)
         fields = line.split("\t")
         if len(fields) > 1:
             opcode = fields[2].split()[0]
-            if opcode in JUMPS:
+            if opcode in JUMP_OPCODES:
                 loc_bytes = fields[0].split(":")[0]
                 loc = int(loc_bytes, 16)
-                print("SECTION LOC:", loc)
                 loc += section_offset
                 jumps[loc] = (opcode, bytes.fromhex(fields[1]))            
 
