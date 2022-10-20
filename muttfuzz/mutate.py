@@ -14,7 +14,7 @@ def get_jumps(filename):
 
     for line in output.split("\n"):
         if "File Offset" in line:
-            offset_hex = Line.split(":")[1].split(")")[0]
+            offset_hex = line.split(":")[1].split(")")[0]
             section_offset = int(offset_hex, 16)
         fields = line.split("\t")
         if len(fields) > 1:
