@@ -13,13 +13,17 @@ def get_jumps(filename):
     output = str(out, encoding="utf-8")
 
     for line in output.split("\n"):
+        if "File Offset" in line:
+            offset_hex = Line.split(":")[1].split(")")[0]
+            section_offset = int(offset_hex, 16)
         fields = line.split("\t")
         if len(fields) > 1:
-            opcode = fields[1]
+            opcode = fields[2].split()[0]
             if opcode in JUMPS:
-                loc_bytes = fields[0].split(":")
-                loc = int(loc_bytes[0], 16)
-                jumps[loc] = (opcode, bytes.fromhex(loc_bytes[1]))
+                loc_bytes = fields[0].split(":")[0]
+                loc = int(loc_bytes, 16)
+                loc += section_offset
+                jumps[loc] = (opcode, bytes.fromhex(fields[1]))            
 
     return jumps
 
