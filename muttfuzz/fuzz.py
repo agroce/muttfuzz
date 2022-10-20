@@ -39,4 +39,3 @@ def fuzz_with_mutants(fuzzer_cmd, executable, total_budget, time_per_mutant, fra
         # always restore the original binary!
         with open(executable, "wb") as f:
             f.write(executable_code)
-            

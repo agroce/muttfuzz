@@ -21,6 +21,8 @@ def get_jumps(filename):
                 section_offset = int(offset_hex, 16)
                 use_offset = False
                 continue
+            if "__afl" in line:
+                continue # heuristic to avoid mutating AFL instrumentation
             fields = line.split("\t")
             if len(fields) > 1:
                 opcode = fields[2].split()[0]
@@ -51,13 +53,19 @@ def get_code(filename):
     with open(filename, "rb") as f:
         return bytearray(f.read())
 
-def mutant(filename):
-    jumps = get_jumps(filename)
-    code = get_code(filename)
+def mutant_from(code, jumps):
+    new_code = bytearray(code)
     (loc, new_data) = pick_and_change(jumps)
     for offset in range(0, len(new_data)):
-        code[loc + offset] = new_data[offset]
-    return code
+        new_code[loc + offset] = new_data[offset]
+    return new_code
+
+def mutant(filename):
+    return mutant_from(get_code(filename), get_jumps(filename))
+
+def mtuate_from(code, jumps, new_filename):
+    with open(new_filename, 'wb') as f:
+        f.write(mutant_from(code, jumps))
 
 def mutate(filename, new_filename):
     with open(new_filename, "wb") as f:
