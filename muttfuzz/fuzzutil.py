@@ -3,7 +3,8 @@ import os
 import signal
 import subprocess
 import time
-import mutate
+
+import muttfuzz.mutate as mutate
 
 
 def restore_executable(executable, executable_code):

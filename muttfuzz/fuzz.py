@@ -2,7 +2,7 @@ import argparse
 from collections import namedtuple
 import sys
 
-import fuzzutil
+import muttfuzz.fuzzutil as fuzzutil
 
 
 def parse_args():
