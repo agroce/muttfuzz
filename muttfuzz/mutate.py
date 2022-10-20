@@ -8,7 +8,7 @@ NEAR_JUMPS = list(map(bytes.fromhex, ["0F 84", "0F 85", "0F 8C", "0F 8D", "0F 8E
 def get_jumps(filename):
     jumps = {}
 
-    proc = subprocess.Popen(["objdump", "-d", "-f", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(["objdump", "-d", "--file-offsets", filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
     output = str(out, encoding="utf-8")
 
