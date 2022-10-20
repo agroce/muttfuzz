@@ -22,7 +22,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, total_budget, time_per_mutant, fra
         while (time.time() - start_fuzz) < total_budget:
             if (time.time() - start_fuzz) < (total_budget * fraction_mutant):
                 print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-                print(round(time.datetime.time() - start_fuzz, 2),
+                print(round(time.time() - start_fuzz, 2),
                       "ELAPSED: GENERATING MUTANT #", mutant_no)
                 mutant_no += 1
                 # make a new mutant of the executable            
