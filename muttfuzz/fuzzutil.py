@@ -6,6 +6,18 @@ import time
 import mutate
 
 
+def restore_executable(executable, executable_code):
+    tries = 1
+    failed = True
+    while (tries < 10) and failed:
+        try:
+            tries += 1
+            with open(executable, "wb") as f:
+                f.write(executable_code)
+            failed = False
+        except:
+            time.sleep(0.1)
+
 def silent_run_with_timeout(cmd, timeout):
     dnull = open(os.devnull, 'w')
     start_P = time.time()
@@ -47,10 +59,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget,
             else:
                 print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                 print(round(time.datetime.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")  
-                with open(executable, "wb") as f:
-                    f.write(executable_code)
+                restore_executable(executable, executable_code)
                 silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz))
     finally:
         # always restore the original binary!
-        with open(executable, "wb") as f:
-            f.write(executable_code)
+        restore_executable(executable, executable_code)
