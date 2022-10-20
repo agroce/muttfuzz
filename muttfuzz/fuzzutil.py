@@ -59,7 +59,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget,
                     subprocess.call(status_cmd, shell=True)
             else:
                 print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-                print(round(time.datetime.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")  
+                print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
                 restore_executable(executable, executable_code)
                 silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz))
     finally:
