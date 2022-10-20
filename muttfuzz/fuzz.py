@@ -1,42 +1,55 @@
-from datetime import datetime
-import os
-import signal
-import subprocess
-import time
-import mutate
+import argparse
+from collections import namedtuple
 
-def silent_run_with_timeout(cmd, timeout):
-    dnull = open(os.devnull, 'w')
-    start_P = time.time()
-    P = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid, stdout=dnull, stderr=dnull)
-    while (P.poll() is None) and ((time.time() - start_P) < timeout):
-        time.sleep(0.5)
-    if P.poll() is None:
-        os.killpg(os.getpgid(P.pid), signal.SIGTERM)
+import fuzzutil
 
-def fuzz_with_mutants(fuzzer_cmd, executable, total_budget, time_per_mutant, fraction_mutant):
-    executable_code = mutate.get_code(executable)
-    executable_jumps = mutate.get_jumps(executable)
-    start_fuzz = time.time()
-    mutant_no = 1
-    try:
-        while (time.time() - start_fuzz) < total_budget:
-            if (time.time() - start_fuzz) < (total_budget * fraction_mutant):
-                print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-                print(round(time.time() - start_fuzz, 2),
-                      "ELAPSED: GENERATING MUTANT #", mutant_no)
-                mutant_no += 1
-                # make a new mutant of the executable            
-                mutate.mutate_from(executable_code, executable_jumps, executable)
-                print("FUZZING MUTANT...")
-                silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
-            else:
-                print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-                print(round(time.datetime.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")  
-                with open(executable, "wb") as f:
-                    f.write(executable_code)
-                silent_run_with_timeout(fuzzer_cmd, total_budget - (time.time() - start_fuzz))
-    finally:
-        # always restore the original binary!
-        with open(executable, "wb") as f:
-            f.write(executable_code)
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('fuzzer_cmd', type=str, default=None,
+                        help='command to run fuzzer on executable')
+    parser.add_argument('executable', metavar='filename', type=str, default=None,
+                        help='executable to be fuzzer/mutated')
+    parser.add_argument('--budget', type=int, default=3600,
+                        help='total fuzzing budget (default 3600)')
+    parser.add_argument('--time_per_mutant', type=int, default=300,
+                        help='max time to fuzz each mutant (default 300)')
+    parser.add_argument('--fraction_mutant', type=float, default=0.5,
+                        help='portion of budget to devote to mutants (default 0.5)')
+    parser.add_argument('--order', type=int, default=1,
+                        help='mutation order (default 1)')
+    parser.add_argument('--status_cmd', type=str, default="",
+                        help='command to execute to show fuzzing stats')    
+
+    parsed_args = parser.parse_args(sys.argv[1:])
+    return (parsed_args, parser)
+
+
+def make_config(pargs, parser):
+    """
+    Process the raw arguments, returning a namedtuple object holding the
+    entire configuration, if everything parses correctly.
+    """
+    pdict = pargs.__dict__
+    # create a namedtuple object for fast attribute lookup
+    key_list = list(pdict.keys())
+    arg_list = [pdict[k] for k in key_list]
+    Config = namedtuple('Config', key_list)
+    nt_config = Config(*arg_list)
+    return nt_config
+
+def main():
+    parsed_args, parser = parse_args()
+    config = make_config(parsed_args, parser)
+    fuzzutil.fuzz_with_mutants(config.fuzzer_cmd,
+                               config.executable,
+                               config.budget,
+                               config.time_per_mutant,
+                               config.fraction_mutant,
+                               config.status_cmd,
+                               config.order)
+
+
+
+if __name__ == "__main__":
+    main()
