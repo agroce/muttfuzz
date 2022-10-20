@@ -9,11 +9,15 @@ import mutate
 def silent_run_with_timeout(cmd, timeout):
     dnull = open(os.devnull, 'w')
     start_P = time.time()
-    P = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid, stdout=dnull, stderr=dnull)
-    while (P.poll() is None) and ((time.time() - start_P) < timeout):
-        time.sleep(0.5)
-    if P.poll() is None:
-        os.killpg(os.getpgid(P.pid), signal.SIGTERM)
+    try:
+        P = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid, stdout=dnull, stderr=dnull)
+        while (P.poll() is None) and ((time.time() - start_P) < timeout):
+            time.sleep(0.5)
+        if P.poll() is None:
+            os.killpg(os.getpgid(P.pid), signal.SIGTERM)
+    finally:
+        if P.poll() is None:
+            os.killpg(os.getpgid(P.pid), signal.SIGTERM)        
 
         
 def fuzz_with_mutants(fuzzer_cmd, executable, budget,
