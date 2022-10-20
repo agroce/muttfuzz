@@ -50,3 +50,7 @@ def mutant(filename):
     for offset in range(0, len(new_data)):
         code[loc + offset] = new_data[offset]
     return code
+
+def mutate(filename, new_filename):
+    with open(new_filename, "wb") as f:
+        f.write(mutant(filename))
