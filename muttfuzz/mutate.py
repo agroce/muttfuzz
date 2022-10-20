@@ -33,7 +33,7 @@ def different_jump(hexdata):
     if hexdata[0] == 15: # NEAR JUMP BYTE CHECK
         return random.choice(list(filter(lambda j: j[1] != hexdata[1], NEAR_JUMPS)))
     else:
-        return random.choice(list(filter(lambda j: j != hexdata[0], SHORT_JUMPS)))
+        return random.choice(list(filter(lambda j: j[0] != hexdata[0], SHORT_JUMPS)))
 
 def pick_and_change(jumps):
     loc = random.choice(list(jumps.keys()))
