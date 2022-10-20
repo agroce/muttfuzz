@@ -63,7 +63,7 @@ def mutant_from(code, jumps):
 def mutant(filename):
     return mutant_from(get_code(filename), get_jumps(filename))
 
-def mtuate_from(code, jumps, new_filename):
+def mutate_from(code, jumps, new_filename):
     with open(new_filename, 'wb') as f:
         f.write(mutant_from(code, jumps))
 
