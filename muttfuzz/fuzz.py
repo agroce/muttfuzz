@@ -21,7 +21,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, total_budget, time_per_mutant, fra
     try:
         while (time.time() - start_fuzz) < total_budget:
             if (time.time() - start_fuzz) < (total_budget * fraction_mutant):
-                print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
+                print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                 print(round(time.datetime.time() - start_fuzz, 2),
                       "ELAPSED: GENERATING MUTANT #", mutant_no)
                 mutant_no += 1
@@ -30,7 +30,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, total_budget, time_per_mutant, fra
                 print("FUZZING MUTANT...")
                 silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
             else:
-                print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
+                print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
                 print(round(time.datetime.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")  
                 with open(executable, "wb") as f:
                     f.write(executable_code)
