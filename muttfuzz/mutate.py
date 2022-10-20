@@ -53,20 +53,21 @@ def get_code(filename):
     with open(filename, "rb") as f:
         return bytearray(f.read())
 
-def mutant_from(code, jumps):
+def mutant_from(code, jumps, order=1):
     new_code = bytearray(code)
-    (loc, new_data) = pick_and_change(jumps)
-    for offset in range(0, len(new_data)):
-        new_code[loc + offset] = new_data[offset]
+    for i in range(order): # allows higher-order mutants, though can undo mutations
+        (loc, new_data) = pick_and_change(jumps)
+        for offset in range(0, len(new_data)):
+            new_code[loc + offset] = new_data[offset]
     return new_code
 
-def mutant(filename):
-    return mutant_from(get_code(filename), get_jumps(filename))
+def mutant(filename, order=1):
+    return mutant_from(get_code(filename), get_jumps(filename), order=order)
 
-def mutate_from(code, jumps, new_filename):
+def mutate_from(code, jumps, new_filename, order=1):
     with open(new_filename, 'wb') as f:
-        f.write(mutant_from(code, jumps))
+        f.write(mutant_from(code, jumps, order=order))
 
-def mutate(filename, new_filename):
+def mutate(filename, new_filename, order=1):
     with open(new_filename, "wb") as f:
-        f.write(mutant(filename))
+        f.write(mutant(filename, order=order))
