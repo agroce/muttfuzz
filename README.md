@@ -7,4 +7,4 @@ mutfuzz "afl-fuzz -i- -o fuzz_target -d ./target @@" target --status_cmd "ls fuz
 ~~~
 
 Thanks to: Peter Goodman @ Trail of Bits, Kush Jain, and Richard Hipp.
-Also thanks to kosak, scottd, dlc, and roc.
+Also thanks to kosak, scottd, and roc.
