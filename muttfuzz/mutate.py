@@ -6,6 +6,9 @@ SHORT_JUMPS = list(map(bytes.fromhex, ["74", "75", "7C", "7D", "7E", "7F", "EB"]
 # no unconditional for near jumps, since changes opcode length, not worth it
 NEAR_JUMPS = list(map(bytes.fromhex, ["0F 84", "0F 85", "0F 8C", "0F 8D", "0F 8E", "0F 8F"]))
 
+# known markers for fuzzer/compiler injected instrumentation/etc.
+INST_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov"]
+
 def get_jumps(filename):
     jumps = {}
 
@@ -21,8 +24,13 @@ def get_jumps(filename):
                 section_offset = int(offset_hex, 16)
                 use_offset = False
                 continue
-            if "__afl" in line:
-                continue # heuristic to avoid mutating AFL instrumentation
+            found_inst = False
+            for i in INST_SET:
+                if i in line:
+                    found_inst = True
+                    break
+            if found_inst:
+                continue # Don't mutate these things
             fields = line.split("\t")
             if len(fields) > 1:
                 opcode = fields[2].split()[0]
