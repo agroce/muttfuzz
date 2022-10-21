@@ -55,8 +55,14 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget,
                 print(round(time.time() - start_fuzz, 2),
                       "ELAPSED: GENERATING MUTANT #", mutant_no)
                 mutant_no += 1
-                # make a new mutant of the executable            
-                mutate.mutate_from(executable_code, executable_jumps, executable, order=order)
+                # make a new mutant of the executable
+                mutated = False
+                while not mutated: # The executable could still be busy
+                    try:
+                        mutate.mutate_from(executable_code, executable_jumps, executable, order=order)
+                        mutated = True
+                    except:
+                        time.sleep(0.5)
                 print("FUZZING MUTANT...")
                 start_run = time.time()
                 silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
