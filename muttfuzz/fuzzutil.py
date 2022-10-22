@@ -8,16 +8,9 @@ import muttfuzz.mutate as mutate
 
 
 def restore_executable(executable, executable_code):
-    tries = 1
-    failed = True
-    while (tries < 10) and failed:
-        try:
-            tries += 1
-            with open(executable, "wb") as f:
-                f.write(executable_code)
-            failed = False
-        except:
-            time.sleep(0.1)
+    with open("/tmp/new_executable", 'wb') as f:
+        f.write(executable_code)
+    os.rename("/tmp/new_executable", executable)
 
 def silent_run_with_timeout(cmd, timeout):
     dnull = open(os.devnull, 'w')
@@ -56,13 +49,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget,
                       "ELAPSED: GENERATING MUTANT #", mutant_no)
                 mutant_no += 1
                 # make a new mutant of the executable
-                mutated = False
-                while not mutated: # The executable could still be busy
-                    try:
-                        mutate.mutate_from(executable_code, executable_jumps, executable, order=order)
-                        mutated = True
-                    except:
-                        time.sleep(0.5)
+                mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order)
+                os.rename("/tmp/new_executable", executable)
                 print("FUZZING MUTANT...")
                 start_run = time.time()
                 silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
