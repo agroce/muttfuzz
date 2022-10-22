@@ -12,15 +12,17 @@ def parse_args():
     parser.add_argument('executable', metavar='filename', type=str, default=None,
                         help='executable to be fuzzer/mutated')
     parser.add_argument('--budget', type=int, default=3600,
-                        help='total fuzzing budget (default 3600)')
+                        help='total fuzzing budget in seconds (default 3600)')
     parser.add_argument('--time_per_mutant', type=int, default=300,
-                        help='max time to fuzz each mutant (default 300)')
+                        help='max time to fuzz each mutant in seconds (default 300)')
     parser.add_argument('--fraction_mutant', type=float, default=0.5,
                         help='portion of budget to devote to mutants (default 0.5)')
     parser.add_argument('--initial_fuzz_cmd', type=str, default="",
                         help='command for initial fuzzing before mutants')
     parser.add_argument('--initial_budget', type=int, default=60,
-                        help='time to run initial fuzzing')
+                        help='how long to run initial fuzzing, in seconds (default 60)')
+    parser.add_argument('--post_mutant_cmd', type=str, default="",
+                        help='command to run after each mutant, potentially to clean up (e.g., for AFL_SKIP_CRASHES)')
     parser.add_argument('--order', type=int, default=1,
                         help='mutation order (default 1)')
     parser.add_argument('--status_cmd', type=str, default="",
@@ -53,6 +55,7 @@ def main():
                                config.fraction_mutant,
                                config.initial_fuzz_cmd,
                                config.initial_budget,
+                               config.post_mutant_cmd,
                                config.status_cmd,
                                config.order)
 

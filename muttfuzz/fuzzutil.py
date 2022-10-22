@@ -37,6 +37,7 @@ def silent_run_with_timeout(cmd, timeout):
 def fuzz_with_mutants(fuzzer_cmd, executable, budget,
                       time_per_mutant, fraction_mutant,
                       initial_fuzz_cmd="", initial_budget=0,
+                      post_mutant_cmd="",
                       status_cmd="", order=1):
     executable_code = mutate.get_code(executable)
     executable_jumps = mutate.get_jumps(executable)
@@ -50,6 +51,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget,
             print("RUNNING INITIAL FUZZING...")
             silent_run_with_timeout(initial_fuzz_cmd, initial_budget)
             if status_cmd != "":
+                print("INITIAL STATUS:")
                 subprocess.call(status_cmd, shell=True)
 
         while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
@@ -67,7 +69,10 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget,
             start_run = time.time()
             silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
             print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
+            if post_mutant_cmd != "":
+                subprocess.call(post_mutant_cmd, shell=True)
             if status_cmd != "":
+                print("STATUS:")
                 subprocess.call(status_cmd, shell=True)
 
         print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
