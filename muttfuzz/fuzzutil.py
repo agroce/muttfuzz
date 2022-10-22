@@ -36,7 +36,7 @@ def silent_run_with_timeout(cmd, timeout):
         
 def fuzz_with_mutants(fuzzer_cmd, executable, budget,
                       time_per_mutant, fraction_mutant,
-                      initial_fuzz_cmd="", initial_time=0,
+                      initial_fuzz_cmd="", initial_budget=0,
                       status_cmd="", order=1):
     executable_code = mutate.get_code(executable)
     executable_jumps = mutate.get_jumps(executable)
