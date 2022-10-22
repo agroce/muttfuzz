@@ -36,19 +36,26 @@ def silent_run_with_timeout(cmd, timeout):
         
 def fuzz_with_mutants(fuzzer_cmd, executable, budget,
                       time_per_mutant, fraction_mutant,
+                      initial_fuzz_cmd="", initial_time=0,
                       status_cmd="", order=1):
     executable_code = mutate.get_code(executable)
     executable_jumps = mutate.get_jumps(executable)
     start_fuzz = time.time()
     mutant_no = 1
     try:
+        if initial_fuzz_cmd != "":
+            print("=" * 10,
+                  datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                  "=" * 10)
+            print("RUNNING INITIAL FUZZING...")
+            silent_run_with_timeout(initial_fuzz_cmd, initial_budget)
         while (time.time() - start_fuzz) < budget:
             if (time.time() - start_fuzz) < (budget * fraction_mutant):
                 print("=" * 10,
                       datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
                       "=" * 10)
                 print(round(time.time() - start_fuzz, 2),
-                      "ELAPSED: GENERATING MUTANT #", mutant_no)
+                      "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
                 mutant_no += 1
                 # make a new mutant of the executable; rename avoids hitting a busy executable
                 mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order)
