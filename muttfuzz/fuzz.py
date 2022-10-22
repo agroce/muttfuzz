@@ -11,16 +11,16 @@ def parse_args():
                         help='command to run fuzzer on executable')
     parser.add_argument('executable', metavar='filename', type=str, default=None,
                         help='executable to be fuzzer/mutated')
-    parser.add_argument('initial_fuzz_cmd', type=str, default="",
-                        help='command for initial fuzzing before mutants')
-    parser.add_argument('initial_budget', type=int, default=60,
-                        help='time to run initial fuzzing')
     parser.add_argument('--budget', type=int, default=3600,
                         help='total fuzzing budget (default 3600)')
     parser.add_argument('--time_per_mutant', type=int, default=300,
                         help='max time to fuzz each mutant (default 300)')
     parser.add_argument('--fraction_mutant', type=float, default=0.5,
                         help='portion of budget to devote to mutants (default 0.5)')
+    parser.add_argument('--initial_fuzz_cmd', type=str, default="",
+                        help='command for initial fuzzing before mutants')
+    parser.add_argument('--initial_budget', type=int, default=60,
+                        help='time to run initial fuzzing')
     parser.add_argument('--order', type=int, default=1,
                         help='mutation order (default 1)')
     parser.add_argument('--status_cmd', type=str, default="",
