@@ -8,6 +8,7 @@ import muttfuzz.mutate as mutate
 
 
 def restore_executable(executable, executable_code):
+    # We do this because it could still be busy if fuzzer hasn't shut down yet
     with open("/tmp/new_executable", 'wb') as f:
         f.write(executable_code)
     os.rename("/tmp/new_executable", executable)
@@ -49,7 +50,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget,
                 print(round(time.time() - start_fuzz, 2),
                       "ELAPSED: GENERATING MUTANT #", mutant_no)
                 mutant_no += 1
-                # make a new mutant of the executable
+                # make a new mutant of the executable; rename avoids hitting a busy executable
                 mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order)
                 os.rename("/tmp/new_executable", executable)
                 subprocess.check_call(['chmod', '+x', executable])
