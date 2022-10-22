@@ -11,6 +11,7 @@ def restore_executable(executable, executable_code):
     with open("/tmp/new_executable", 'wb') as f:
         f.write(executable_code)
     os.rename("/tmp/new_executable", executable)
+    subprocess.check_call(['chmod', '+x', executable])
 
 def silent_run_with_timeout(cmd, timeout):
     dnull = open(os.devnull, 'w')
@@ -51,6 +52,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget,
                 # make a new mutant of the executable
                 mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order)
                 os.rename("/tmp/new_executable", executable)
+                subprocess.check_call(['chmod', '+x', executable])
                 print("FUZZING MUTANT...")
                 start_run = time.time()
                 silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
