@@ -55,7 +55,7 @@ def different_jump(hexdata):
         return random.choice(list(filter(lambda j: j[1] != hexdata[1], NEAR_JUMPS)))
     else:
         # Have a high chance of just changing short JE and JNE to a forced JMP, "removing" a branch
-        if ((hexdata[0] == SHORT_JUMPS[0])  or (hexdata[0] == SHORT_JUMPS[1])) and (random.random() <= 0.75):
+        if ((hexdata[0] == SHORT_JUMPS[0][0])  or (hexdata[0] == SHORT_JUMPS[1][0])) and (random.random() <= 0.75):
             return SHORT_JUMPS[-1]
         return random.choice(list(filter(lambda j: j[0] != hexdata[0], SHORT_JUMPS)))
 
