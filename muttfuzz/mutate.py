@@ -50,12 +50,12 @@ def get_jumps(filename):
 def different_jump(hexdata):
     if hexdata[0] == 15: # NEAR JUMP BYTE CHECK
         # Have a high chance of just changing near JE and JNE to a forced JMP, "removing" a branch
-        if ((j[1] == NEAR_JUMPS[0][1])  or (j[1] == NEAR_JUMPS[1][1])) and (random.random() <= 0.75):
+        if ((hexdata[1] == NEAR_JUMPS[0][1])  or (hexdata[1] == NEAR_JUMPS[1][1])) and (random.random() <= 0.75):
             return NEAR_JUMPS[-1]
         return random.choice(list(filter(lambda j: j[1] != hexdata[1], NEAR_JUMPS)))
     else:
         # Have a high chance of just changing short JE and JNE to a forced JMP, "removing" a branch
-        if ((j[0] == SHORT_JUMPS[0])  or (j[0] == SHORT_JUMPS[1])) and (random.random() <= 0.75):
+        if ((hexdata[0] == SHORT_JUMPS[0])  or (hexdata[0] == SHORT_JUMPS[1])) and (random.random() <= 0.75):
             return SHORT_JUMPS[-1]
         return random.choice(list(filter(lambda j: j[0] != hexdata[0], SHORT_JUMPS)))
 
