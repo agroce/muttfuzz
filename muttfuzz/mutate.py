@@ -4,7 +4,7 @@ import subprocess
 JUMP_OPCODES = ["je", "jne", "jl", "jle", "jg", "jge"]
 SHORT_JUMPS = list(map(bytes.fromhex, ["74", "75", "7C", "7D", "7E", "7F", "EB"]))
 # no unconditional for near jumps, since changes opcode length, not worth it
-NEAR_JUMPS = list(map(bytes.fromhex, ["0F 84", "0F 85", "0F 8C", "0F 8D", "0F 8E", "0F 8F"]))
+NEAR_JUMPS = list(map(bytes.fromhex, ["0F 84", "0F 85", "0F 8C", "0F 8D", "0F 8E", "0F 8F" "90 E9"]))
 
 # known markers for fuzzer/compiler injected instrumentation/etc.
 INST_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov"]
@@ -49,8 +49,14 @@ def get_jumps(filename):
 
 def different_jump(hexdata):
     if hexdata[0] == 15: # NEAR JUMP BYTE CHECK
+        # Have a high chance of just changing near JE and JNE to a forced JMP, "removing" a branch
+        if ((j[1] == NEAR_JUMPS[0][1])  or (j[1] == NEAR_JUMPS[1][1])) and (random.random() <= 0.75):
+            return NEAR_JUMPS[-1]
         return random.choice(list(filter(lambda j: j[1] != hexdata[1], NEAR_JUMPS)))
     else:
+        # Have a high chance of just changing short JE and JNE to a forced JMP, "removing" a branch
+        if ((j[0] == SHORT_JUMPS[0])  or (j[0] == SHORT_JUMPS[1])) and (random.random() <= 0.75):
+            return SHORT_JUMPS[-1]
         return random.choice(list(filter(lambda j: j[0] != hexdata[0], SHORT_JUMPS)))
 
 def pick_and_change(jumps):
