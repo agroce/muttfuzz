@@ -1,5 +1,7 @@
 MuttFuzz doggedly fuzzes for you, mutating the executable as it goes!
 
+<img src="mutt.jpeg" alt="drawing" width="200"/>
+
 ---------------------------------
 
 **FAQ**
@@ -50,6 +52,10 @@ This example shows how to use MuttFuzz with AFL (or AFLplusplus) but using it wi
 **Q**: Why is fuzzing mutants helpful?
 
 **A**: For more information on that, and on the source-based version of this idea, see [our paper in submission to ACM TOSEM, the final report for our FUZZING'22 registered report](https://github.com/agroce/fuzzing22report/blob/master/tosem/currentdraft.pdf).
+
+**Q**: Why "MuttFuzz"?
+
+**A**: When I (Alex) created the repo, I made a typo, but I liked it.  Certainly memorable compared to "mutfuzz" for "mutant fuzzer".
 
 -------------------------------
 
