@@ -2,7 +2,7 @@ import argparse
 from collections import namedtuple
 import sys
 
-import muttfuzz.fuzzutil as fuzzutil
+from muttfuzz import fuzzutil
 
 
 def parse_args():
@@ -22,17 +22,17 @@ def parse_args():
     parser.add_argument('--initial_budget', type=int, default=60,
                         help='how long to run initial fuzzing, in seconds (default 60)')
     parser.add_argument('--post_mutant_cmd', type=str, default="",
-                        help='command to run after each mutant, potentially to clean up (e.g., for AFL_SKIP_CRASHES)')
+                        help='command to run after each mutant, (e.g., for AFL_SKIP_CRASHES)')
     parser.add_argument('--order', type=int, default=1,
                         help='mutation order (default 1)')
     parser.add_argument('--status_cmd', type=str, default="",
-                        help='command to execute to show fuzzing stats')    
+                        help='command to execute to show fuzzing stats')
 
     parsed_args = parser.parse_args(sys.argv[1:])
     return (parsed_args, parser)
 
 
-def make_config(pargs, parser):
+def make_config(pargs):
     """
     Process the raw arguments, returning a namedtuple object holding the
     entire configuration, if everything parses correctly.
@@ -46,8 +46,8 @@ def make_config(pargs, parser):
     return nt_config
 
 def main():
-    parsed_args, parser = parse_args()
-    config = make_config(parsed_args, parser)
+    parsed_args, _ = parse_args()
+    config = make_config(parsed_args)
     fuzzutil.fuzz_with_mutants(config.fuzzer_cmd,
                                config.executable,
                                config.budget,
