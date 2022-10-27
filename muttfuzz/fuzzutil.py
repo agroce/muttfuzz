@@ -4,7 +4,7 @@ import signal
 import subprocess
 import time
 
-import muttfuzz.mutate as mutate
+from muttfuzz import mutate
 
 
 def restore_executable(executable, executable_code):
@@ -19,7 +19,8 @@ def silent_run_with_timeout(cmd, timeout):
     start_P = time.time()
     try:
         with open("cmd_errors.txt", 'w') as cmd_errors:
-            P = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid, stdout=dnull, stderr=cmd_errors)
+            P = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid,
+                                 stdout=dnull, stderr=cmd_errors)
             while (P.poll() is None) and ((time.time() - start_P) < timeout):
                 time.sleep(0.5)
             if P.poll() is None:
@@ -31,9 +32,9 @@ def silent_run_with_timeout(cmd, timeout):
             print(cmd_errors_out)
     finally:
         if P.poll() is None:
-            os.killpg(os.getpgid(P.pid), signal.SIGTERM)        
+            os.killpg(os.getpgid(P.pid), signal.SIGTERM)
 
-        
+
 def fuzz_with_mutants(fuzzer_cmd, executable, budget,
                       time_per_mutant, fraction_mutant,
                       initial_fuzz_cmd="", initial_budget=0,
