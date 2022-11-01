@@ -20,7 +20,7 @@ def get_jumps(filename):
     for line in output.split("\n"):
         try:
             if "File Offset" in line and line[-1] == ":":
-                section_base = int(line.split()[0])
+                section_base = int(line.split()[0], 16)
                 offset_hex = line.split("File Offset:")[1].split(")")[0]
                 section_offset = int(offset_hex, 16) - section_base
                 continue
