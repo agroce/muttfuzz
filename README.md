@@ -23,12 +23,12 @@ MuttFuzz doggedly fuzzes for you, mutating the executable as it goes!
 **A**:
 
 ~~~
-git clone https://github.com/agroce/muttfuzz.git
-cd muttfuzz
-python3 setup.py install
+pip3 install muttfuzz
 ~~~
 
-should do it on most linux setups.  Right now, MuttFuzz doesn't have any serious dependencies.  Once it's more stable, it'll probably be on pip, also.
+(perhaps with `--user`)
+
+should do the trick.  Right now, there are no serious dependencies.
 
 **Q: How do I use MuttFuzz?** 
 

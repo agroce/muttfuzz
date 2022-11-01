@@ -20,9 +20,9 @@ def get_jumps(filename):
     for line in output.split("\n"):
         try:
             if "File Offset" in line and line[-1] == ":":
+                section_base = int(line.split()[0])
                 offset_hex = line.split("File Offset:")[1].split(")")[0]
-                section_offset = int(offset_hex, 16)
-                use_offset = False
+                section_offset = int(offset_hex, 16) - section_base
                 continue
             found_inst = False
             for i in INST_SET:
@@ -36,11 +36,7 @@ def get_jumps(filename):
                 opcode = fields[2].split()[0]
                 if opcode in JUMP_OPCODES:
                     loc_bytes = fields[0].split(":")[0]
-                    loc = int(loc_bytes, 16)
-                    if loc < section_offset:
-                        use_offset = True
-                    if use_offset:
-                        loc += section_offset
+                    loc = int(loc_bytes, 16) + section_offset
                     jumps[loc] = (opcode, bytes.fromhex(fields[1]))
         except: # If we can't parse some line in the objdump, just skip it
             pass
