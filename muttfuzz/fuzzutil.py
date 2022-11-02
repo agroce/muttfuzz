@@ -163,7 +163,7 @@ def fuzz_with_mutants_via_function(fuzzer_fn, executable, budget,
         print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
         restore_executable(executable, executable_code)
         try:
-            with time_limit(budget - (time.time() - start_fuzz)):
+            with time_limit(int(budget - (time.time() - start_fuzz))):
                 fuzzer_fn()
         except TimeoutException:
             pass
