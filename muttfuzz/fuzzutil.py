@@ -120,13 +120,13 @@ def fuzz_with_mutants_via_function(fuzzer_fn, executable, budget,
     start_fuzz = time.time()
     mutant_no = 1
     try:
-        if initial_fuzz_fn is not None:
+        if initial_fn is not None:
             print("=" * 10,
                   datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
                   "=" * 10)
             print("RUNNING INITIAL FUZZING...")
             with time_limit(initial_budget):
-                initial_fuzz_fn()
+                initial_fn()
             if status_fn is not None:
                 print("INITIAL STATUS:")
                 status_fn()
