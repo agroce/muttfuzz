@@ -125,8 +125,11 @@ def fuzz_with_mutants_via_function(fuzzer_fn, executable, budget,
                   datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
                   "=" * 10)
             print("RUNNING INITIAL FUZZING...")
-            with time_limit(initial_budget):
-                initial_fn()
+            try:
+                with time_limit(initial_budget):
+                    initial_fn()
+            except TimeoutException:
+                pass
             if status_fn is not None:
                 print("INITIAL STATUS:")
                 status_fn()
@@ -144,8 +147,11 @@ def fuzz_with_mutants_via_function(fuzzer_fn, executable, budget,
             subprocess.check_call(['chmod', '+x', executable])
             print("FUZZING MUTANT...")
             start_run = time.time()
-            with time_limit(time_per_mutant):
-                fuzzer_fn()
+            try:
+                with time_limit(time_per_mutant):
+                    fuzzer_fn()
+            except TimeoutException:
+                pass
             print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
             if post_mutant_fn is not None:
                 post_mutant_fn()
@@ -156,8 +162,11 @@ def fuzz_with_mutants_via_function(fuzzer_fn, executable, budget,
         print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
         restore_executable(executable, executable_code)
-        with time_limit(budget - (time.time() - start_fuzz)):
-            fuzzer_fn()
+        try:
+            with time_limit(budget - (time.time() - start_fuzz)):
+                fuzzer_fn()
+        except TimeoutException:
+            pass
         print("COMPLETED ALL FUZZING AFTER", round(time.time() - start_fuzz, 2), "SECONDS")
         if status_fn is not None:
             print("FINAL STATUS:")
