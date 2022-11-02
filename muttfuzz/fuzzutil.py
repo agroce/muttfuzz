@@ -3,8 +3,28 @@ import os
 import signal
 import subprocess
 import time
+from contextlib import contextmanager
 
 from muttfuzz import mutate
+
+
+class TimeoutException(Exception):
+    """"Exception thrown when timeouts occur"""
+
+
+@contextmanager
+def time_limit(seconds):
+    """Method to define a time limit before throwing exception"""
+
+    def signal_handler(signum, frame):
+        raise TimeoutException("Timed out!")
+
+    signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
 
 
 def restore_executable(executable, executable_code):
@@ -13,6 +33,7 @@ def restore_executable(executable, executable_code):
         f.write(executable_code)
     os.rename("/tmp/new_executable", executable)
     subprocess.check_call(['chmod', '+x', executable])
+
 
 def silent_run_with_timeout(cmd, timeout):
     dnull = open(os.devnull, 'w')
@@ -84,6 +105,63 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget,
         if status_cmd != "":
             print("FINAL STATUS:")
             subprocess.call(status_cmd, shell=True)
+    finally:
+        # always restore the original binary!
+        restore_executable(executable, executable_code)
+
+
+def fuzz_with_mutants_via_function(fuzzer_fn, executable, budget,
+                                   time_per_mutant, fraction_mutant,
+                                   initial_fn=None, initial_budget=0,
+                                   post_mutant_fn=None,
+                                   status_fn=None, order=1):
+    executable_code = mutate.get_code(executable)
+    executable_jumps = mutate.get_jumps(executable)
+    start_fuzz = time.time()
+    mutant_no = 1
+    try:
+        if initial_fuzz_fn is not None:
+            print("=" * 10,
+                  datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                  "=" * 10)
+            print("RUNNING INITIAL FUZZING...")
+            with time_limit(initial_budget):
+                initial_fuzz_fn()
+            if status_fn is not None:
+                print("INITIAL STATUS:")
+                status_fn()
+
+        while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
+            print("=" * 10,
+                  datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                  "=" * 10)
+            print(round(time.time() - start_fuzz, 2),
+                  "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
+            mutant_no += 1
+            # make a new mutant of the executable; rename avoids hitting a busy executable
+            mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order)
+            os.rename("/tmp/new_executable", executable)
+            subprocess.check_call(['chmod', '+x', executable])
+            print("FUZZING MUTANT...")
+            start_run = time.time()
+            with time_limit(time_per_mutant):
+                fuzzer_fn()
+            print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
+            if post_mutant_fn is not None:
+                post_mutant_fn()
+            if status_fn is not None:
+                print("STATUS:")
+                status_fn()
+
+        print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
+        restore_executable(executable, executable_code)
+        with time_limit(budget - (time.time() - start_fuzz)):
+            fuzzer_fn()
+        print("COMPLETED ALL FUZZING AFTER", round(time.time() - start_fuzz, 2), "SECONDS")
+        if status_fn is not None:
+            print("FINAL STATUS:")
+            status_fn()
     finally:
         # always restore the original binary!
         restore_executable(executable, executable_code)
