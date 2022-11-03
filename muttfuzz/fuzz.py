@@ -57,6 +57,7 @@ def main():
                                config.fraction_mutant,
                                config.initial_fuzz_cmd,
                                config.initial_budget,
+                               config.post_initial_cmd,
                                config.post_mutant_cmd,
                                config.status_cmd,
                                config.order)
