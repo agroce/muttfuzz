@@ -21,6 +21,8 @@ def parse_args():
                         help='command for initial fuzzing before mutants')
     parser.add_argument('--initial_budget', type=int, default=60,
                         help='how long to run initial fuzzing, in seconds (default 60)')
+    parser.add_argument('--post_initial_cmd', type=str, default="",
+                        help='command to run after initial fuzzing')
     parser.add_argument('--post_mutant_cmd', type=str, default="",
                         help='command to run after each mutant, (e.g., for AFL_SKIP_CRASHES)')
     parser.add_argument('--order', type=int, default=1,
