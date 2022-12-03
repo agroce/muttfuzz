@@ -50,17 +50,20 @@ def make_config(pargs):
 def main():
     parsed_args, _ = parse_args()
     config = make_config(parsed_args)
-    fuzzutil.fuzz_with_mutants(config.fuzzer_cmd,
-                               config.executable,
-                               config.budget,
-                               config.time_per_mutant,
-                               config.fraction_mutant,
-                               config.initial_fuzz_cmd,
-                               config.initial_budget,
-                               config.post_initial_cmd,
-                               config.post_mutant_cmd,
-                               config.status_cmd,
-                               config.order)
+    try:
+        fuzzutil.fuzz_with_mutants(config.fuzzer_cmd,
+                                   config.executable,
+                                   config.budget,
+                                   config.time_per_mutant,
+                                   config.fraction_mutant,
+                                   config.initial_fuzz_cmd,
+                                   config.initial_budget,
+                                   config.post_initial_cmd,
+                                   config.post_mutant_cmd,
+                                   config.status_cmd,
+                                   config.order)
+    except IndexError:
+        print("Target binary seems to have no jumps, so mutation will not do anything!")
 
 
 
