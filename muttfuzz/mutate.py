@@ -8,6 +8,7 @@ NEAR_JUMPS = list(map(bytes.fromhex, ["0F 84", "0F 85", "0F 8C", "0F 8D", "0F 8E
 
 # known markers for fuzzer/compiler injected instrumentation/etc.
 INST_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov"]
+INST_SET.extend ["DeepState", "deepstate"]
 
 def get_jumps(filename):
     jumps = {}
