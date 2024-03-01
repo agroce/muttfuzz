@@ -1,6 +1,6 @@
 MuttFuzz doggedly fuzzes for you, mutating the executable as it goes!
 
-<img src="mutt.jpeg" alt="drawing" width="200"/>
+<img src="muttfuzz.png" alt="drawing" width="200"/>
 
 ---------------------------------
 
