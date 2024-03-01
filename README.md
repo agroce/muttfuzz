@@ -16,7 +16,7 @@ MuttFuzz doggedly fuzzes for you, mutating the executable as it goes!
 
 **Q**: What are major limitations of MuttFuzz?
 
-**A**: Right now, MuttFuzz only works for x86 Linux, and MuttFuzz may not work well if 1) your fuzzer needs two executables (like Angora) or 2) your target program disassembles poorly using _objdump_.  That's it.  Also, of course, if you are fuzzing a library you'll need to statically link it into your executable.
+**A**: Right now, MuttFuzz only works for x86 Linux, and MuttFuzz may not work well if 1) your fuzzer needs two executables (like Angora) or 2) your target program disassembles poorly using _objdump_.  That's it.  Also, of course, if you are fuzzing a library you'll need to statically link it into your executable.  Alternatively, just provide the dynamically linked library as the filename argument, since MuttFuzz doesn't assume the filename is a full executable.
 
 **Q: How do I install MuttFuzz?**
 
