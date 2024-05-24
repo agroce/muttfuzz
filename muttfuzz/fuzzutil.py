@@ -58,6 +58,7 @@ def silent_run_with_timeout(cmd, timeout):
 
 
 def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_mutant,
+                      avoid_mutating=[],
                       prune_mutant_cmd="",
                       prune_mutant_timeout=1,
                       initial_fuzz_cmd="",
@@ -67,7 +68,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       status_cmd="",
                       order=1):
     executable_code = mutate.get_code(executable)
-    executable_jumps = mutate.get_jumps(executable)
+    executable_jumps = mutate.get_jumps(executable, avoid_mutating)
     start_fuzz = time.time()
     mutant_no = 1
     try:
@@ -124,7 +125,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         # always restore the original binary!
         restore_executable(executable, executable_code)
 
-
+# Currently this is not used, and is not updated to match all changes to the API!
+# It should work, but it does not support everything the command line does
 def fuzz_with_mutants_via_function(fuzzer_fn, executable, budget,
                                    time_per_mutant, fraction_mutant,
                                    initial_fn=None, initial_budget=0,

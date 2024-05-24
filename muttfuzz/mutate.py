@@ -11,7 +11,7 @@ NEAR_NAMES = dict(zip(NEAR_JUMPS, ["je", "jne", "jl", "jge", "jle", "jg", "jmp"]
 INST_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov", "AFL_"]
 INST_SET.extend(["DeepState", "deepstate"])
 
-def get_jumps(filename):
+def get_jumps(filename, avoid_mutating=[]):
     jumps = {}
 
     proc = subprocess.Popen(["objdump", "-d", "--file-offsets", filename],
@@ -19,13 +19,21 @@ def get_jumps(filename):
     out, err = proc.communicate()
     output = str(out, encoding="utf-8")
 
+    avoid = False
+
     for line in output.split("\n"):
         try:
             if "File Offset" in line and line[-1] == ":":
+                avoid = False
                 section_name = line.split()[1]
+                for s in avoid_mutating:
+                    if s in section_name:
+                        avoid = True
                 section_base = int(line.split()[0], 16)
                 offset_hex = line.split("File Offset:")[1].split(")")[0]
                 section_offset = int(offset_hex, 16) - section_base
+                continue
+            if avoid:
                 continue
             found_inst = False
             for i in INST_SET:
@@ -81,13 +89,13 @@ def mutant_from(code, jumps, order=1):
             new_code[loc + offset] = new_data[offset]
     return new_code
 
-def mutant(filename, order=1):
-    return mutant_from(get_code(filename), get_jumps(filename), order=order)
+def mutant(filename, order=1, avoid_mutating=[]):
+    return mutant_from(get_code(filename), get_jumps(filename, avoid_mutating), order=order)
 
 def mutate_from(code, jumps, new_filename, order=1):
     with open(new_filename, 'wb') as f:
         f.write(mutant_from(code, jumps, order=order))
 
-def mutate(filename, new_filename, order=1):
+def mutate(filename, new_filename, order=1, avoid_mutating=[]):
     with open(new_filename, "wb") as f:
-        f.write(mutant(filename, order=order))
+        f.write(mutant(filename, order=order, avoid_mutating=avoid_mutating))
