@@ -65,7 +65,7 @@ def pick_and_change(jumps):
     print("ORIGINAL CODE:", jumps[loc][3])
     if changed in SHORT_NAMES:
         print("CHANGING TO", SHORT_NAMES[changed])
-    else
+    else:
         print("CHANGING TO", NEAR_NAMES[changed])
     return (loc, changed)
 
