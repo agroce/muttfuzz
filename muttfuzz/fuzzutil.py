@@ -43,7 +43,7 @@ def silent_run_with_timeout(cmd, timeout):
             P = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid,
                                  stdout=dnull, stderr=cmd_errors)
             while (P.poll() is None) and ((time.time() - start_P) < timeout):
-                time.sleep(0.5)
+                time.sleep(min(0.5, timeout / 10.0)) # Allow for small timeouts
             if P.poll() is None:
                 os.killpg(os.getpgid(P.pid), signal.SIGTERM)
         with open("cmd_errors.txt", 'r') as cmd_errors:
@@ -54,14 +54,18 @@ def silent_run_with_timeout(cmd, timeout):
     finally:
         if P.poll() is None:
             os.killpg(os.getpgid(P.pid), signal.SIGTERM)
+    return P.returncode
 
 
-def fuzz_with_mutants(fuzzer_cmd, executable, budget,
-                      time_per_mutant, fraction_mutant,
-                      initial_fuzz_cmd="", initial_budget=0,
+def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_mutant,
+                      prune_mutant_cmd="",
+                      prune_mutant_timeout=1,
+                      initial_fuzz_cmd="",
+                      initial_budget=0,
                       post_initial_cmd="",
                       post_mutant_cmd="",
-                      status_cmd="", order=1):
+                      status_cmd="",
+                      order=1):
     executable_code = mutate.get_code(executable)
     executable_jumps = mutate.get_jumps(executable)
     start_fuzz = time.time()
@@ -90,15 +94,23 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget,
             mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order)
             os.rename("/tmp/new_executable", executable)
             subprocess.check_call(['chmod', '+x', executable])
-            print("FUZZING MUTANT...")
-            start_run = time.time()
-            silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
-            print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
-            if post_mutant_cmd != "":
-                subprocess.call(post_mutant_cmd, shell=True)
-            if status_cmd != "":
-                print("STATUS:")
-                subprocess.call(status_cmd, shell=True)
+            mutant_ok = True
+            if prune_mutant_cmd != "":
+                print("CHECKING MUTANT...")
+                r = silent_run_with_timeout(prune_mutant_cmd, prune_mutant_timeout)
+                if r != 0:
+                    print("CHECK FAILED WITH RETURN CODE", r)
+                    mutant_ok = False
+            if mutant_ok:
+                print("FUZZING MUTANT...")
+                start_run = time.time()
+                silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
+                print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
+                if post_mutant_cmd != "":
+                    subprocess.call(post_mutant_cmd, shell=True)
+                if status_cmd != "":
+                    print("STATUS:")
+                    subprocess.call(status_cmd, shell=True)
 
         print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")

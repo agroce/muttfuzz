@@ -17,6 +17,10 @@ def parse_args():
                         help='max time to fuzz each mutant in seconds (default 300)')
     parser.add_argument('--fraction_mutant', type=float, default=0.5,
                         help='portion of budget to devote to mutants (default 0.5)')
+    parser.add_argument('--prune_mutant_cmd', type=str, default="",
+                        help='command to check mutants for validity/interest')
+    parser.add_argument('--prune_mutant_timeout', type=float, default=2.0,
+                        help='timeout for mutant check')
     parser.add_argument('--initial_fuzz_cmd', type=str, default="",
                         help='command for initial fuzzing before mutants')
     parser.add_argument('--initial_budget', type=int, default=60,
@@ -56,6 +60,8 @@ def main():
                                    config.budget,
                                    config.time_per_mutant,
                                    config.fraction_mutant,
+                                   config.prune_mutant_cmd,
+                                   config.prune_mutant_timeout,
                                    config.initial_fuzz_cmd,
                                    config.initial_budget,
                                    config.post_initial_cmd,
