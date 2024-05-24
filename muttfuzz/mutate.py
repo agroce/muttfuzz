@@ -3,8 +3,9 @@ import subprocess
 
 JUMP_OPCODES = ["je", "jne", "jl", "jle", "jg", "jge"]
 SHORT_JUMPS = list(map(bytes.fromhex, ["74", "75", "7C", "7D", "7E", "7F", "EB"]))
-# no unconditional for near jumps, since changes opcode length, not worth it
+SHORT_NAMES = dict(zip(SHORT_JUMPS, ["je", "jne", "jl", "jge", "jle", "jg", "jmp"]))
 NEAR_JUMPS = list(map(bytes.fromhex, ["0F 84", "0F 85", "0F 8C", "0F 8D", "0F 8E", "0F 8F", "90 E9"]))
+NEAR_NAMES = dict(zip(NEAR_JUMPS, ["je", "jne", "jl", "jge", "jle", "jg", "jmp"]))
 
 # known markers for fuzzer/compiler injected instrumentation/etc.
 INST_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov", "AFL_"]
@@ -21,6 +22,7 @@ def get_jumps(filename):
     for line in output.split("\n"):
         try:
             if "File Offset" in line and line[-1] == ":":
+                section_name = line.split()[1]
                 section_base = int(line.split()[0], 16)
                 offset_hex = line.split("File Offset:")[1].split(")")[0]
                 section_offset = int(offset_hex, 16) - section_base
@@ -38,7 +40,7 @@ def get_jumps(filename):
                 if opcode in JUMP_OPCODES:
                     loc_bytes = fields[0].split(":")[0]
                     loc = int(loc_bytes, 16) + section_offset
-                    jumps[loc] = (opcode, bytes.fromhex(fields[1]))
+                    jumps[loc] = (opcode, bytes.fromhex(fields[1]), section_name, line)
         except: # If we can't parse some line in the objdump, just skip it
             pass
 
@@ -58,7 +60,14 @@ def different_jump(hexdata):
 
 def pick_and_change(jumps):
     loc = random.choice(list(jumps.keys()))
-    return (loc, different_jump(jumps[loc][1]))
+    changed = different_jump(jumps[loc][1])
+    print("MUTATING JUMP IN", jumps[loc][2], "WITH ORIGINAL OPCODE", jumps[loc][0])
+    print("ORIGINAL CODE:", jumps[loc][3])
+    if changed in SHORT_NAMES:
+        print("CHANGING TO", SHORT_NAMES[changed])
+    else
+        print("CHANGING TO", NEAR_NAMES[changed])
+    return (loc, changed)
 
 def get_code(filename):
     with open(filename, "rb") as f:
