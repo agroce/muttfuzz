@@ -62,7 +62,7 @@ def main():
                                    config.budget,
                                    config.time_per_mutant,
                                    config.fraction_mutant,
-                                   config.avoid_mutating.replace(", ", ",").split(",").
+                                   config.avoid_mutating.replace(", ", ",").split(","),
                                    config.prune_mutant_cmd,
                                    config.prune_mutant_timeout,
                                    config.initial_fuzz_cmd,
