@@ -17,8 +17,10 @@ def parse_args():
                         help='max time to fuzz each mutant in seconds (default 300)')
     parser.add_argument('--fraction_mutant', type=float, default=0.5,
                         help='portion of budget to devote to mutants (default 0.5)')
+    parser.add_argument('--only_mutate', type=str, default="",
+                        help='string with comma delimited list of functions patterns to mutate (match by simple inclusion)')
     parser.add_argument('--avoid_mutating', type=str, default="",
-                        help='string with comma delimited list of sections not to mutate inside')
+                        help='string with comma delimited list of function patterns not to mutate (match by simple inclusion)')
     parser.add_argument('--prune_mutant_cmd', type=str, default="",
                         help='command to check mutants for validity/interest')
     parser.add_argument('--prune_mutant_timeout', type=float, default=2.0,
@@ -62,6 +64,7 @@ def main():
                                    config.budget,
                                    config.time_per_mutant,
                                    config.fraction_mutant,
+                                   config.only_mutate.replace(", ", ",").split(","),
                                    config.avoid_mutating.replace(", ", ",").split(","),
                                    config.prune_mutant_cmd,
                                    config.prune_mutant_timeout,

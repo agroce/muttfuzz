@@ -11,7 +11,7 @@ NEAR_NAMES = dict(zip(NEAR_JUMPS, ["je", "jne", "jl", "jge", "jle", "jg", "jmp"]
 INST_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov", "AFL_"]
 INST_SET.extend(["DeepState", "deepstate"])
 
-def get_jumps(filename, avoid_mutating=[]):
+def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
     jumps = {}
 
     proc = subprocess.Popen(["objdump", "-d", "--file-offsets", filename],
@@ -28,6 +28,15 @@ def get_jumps(filename, avoid_mutating=[]):
                 section_name = line.split()[1]
                 for s in avoid_mutating:
                     if s in section_name:
+                        avoid = True
+                        break
+                if only_mutate != []:
+                    found = False
+                    for s in only_mutate:
+                        if s in section_name:
+                            found = True
+                            break
+                    if not found:
                         avoid = True
                 section_base = int(line.split()[0], 16)
                 offset_hex = line.split("File Offset:")[1].split(")")[0]
