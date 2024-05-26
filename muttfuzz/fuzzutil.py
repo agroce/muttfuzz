@@ -47,10 +47,13 @@ def silent_run_with_timeout(cmd, timeout):
             if P.poll() is None:
                 os.killpg(os.getpgid(P.pid), signal.SIGTERM)
         with open("cmd_errors.txt", 'r') as cmd_errors:
-            cmd_errors_out = cmd_errors.read()
+            try:
+                cmd_errors_out = cmd_errors.read()
+            except:
+                cmd_errors_out = "ERROR READING OUTPUT"
         if len(cmd_errors_out) > 0:
-            print("ERRORS:")
-            print(cmd_errors_out)
+            print("OUTPUT (TRUNCATED TO LAST 20 LINES):")
+            print(cmd_errors_out.split("\n")[-20].join("\n"))
     finally:
         if P.poll() is None:
             os.killpg(os.getpgid(P.pid), signal.SIGTERM)
