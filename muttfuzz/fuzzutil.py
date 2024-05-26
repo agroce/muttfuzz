@@ -53,7 +53,7 @@ def silent_run_with_timeout(cmd, timeout):
                 cmd_errors_out = "ERROR READING OUTPUT"
         if len(cmd_errors_out) > 0:
             print("OUTPUT (TRUNCATED TO LAST 20 LINES):")
-            print(cmd_errors_out.split("\n")[-20:].join("\n"))
+            print("\n".join(cmd_errors_out.split("\n")[-20:]))
     finally:
         if P.poll() is None:
             os.killpg(os.getpgid(P.pid), signal.SIGTERM)
