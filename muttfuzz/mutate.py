@@ -4,8 +4,12 @@ import subprocess
 JUMP_OPCODES = ["je", "jne", "jl", "jle", "jg", "jge"]
 SHORT_JUMPS = list(map(bytes.fromhex, ["74", "75", "7C", "7D", "7E", "7F", "EB"]))
 SHORT_NAMES = dict(zip(SHORT_JUMPS, ["je", "jne", "jl", "jge", "jle", "jg", "jmp"]))
+SHORT_OPPOSITES = list(map(bytes.fromhex, ["75", "74", "7D", "7C", "7F", "7E"]))
+SHORT_FLIP = dict(zip(map(lambda x: x[0], SHORT_JUMPS[:-1]), SHORT_OPPOSITES))
 NEAR_JUMPS = list(map(bytes.fromhex, ["0F 84", "0F 85", "0F 8C", "0F 8D", "0F 8E", "0F 8F", "90 E9"]))
 NEAR_NAMES = dict(zip(NEAR_JUMPS, ["je", "jne", "jl", "jge", "jle", "jg", "jmp"]))
+NEAR_OPPOSITES = list(map(bytes.fromhex, ["0F 85", "0F 84", "0F 8D", "0F 8C", "0F 8F", "0F 8E"]))
+NEAR_FLIP = dict(zip(map(lambda x: x[1], NEAR_JUMPS[:-1]), NEAR_OPPOSITES))
 
 NOP = bytes.fromhex("90") # Needed to erase a jump
 HALT = bytes.fromhex("F4") # Needed for reachability check
@@ -67,9 +71,16 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
     return jumps
 
 def different_jump(hexdata):
+    P_FLIP = 0.70
+    # First, just flip the jump condition 70% of the time
+    if (random.random() <= P_FLIP):
+        if hexdata[0] == 15: # NEAR JUMP
+            return NEAR_FLIP[hexdata[1]]
+        else:
+            return SHORT_FLIP[hexdata[0]]
     P_DC = 0.40 # P(Don't Care)
     P_DC_JMP = P_DC / (1 - P_DC)
-    # Current approach is to change to "don't care" (take or avoid) 80% of time, mutate 20%
+    # Then change to "don't care" (take or avoid) 80% of time, mutate otherwise 20%
     if (random.random() <= P_DC): # Just remove the jump by providing a NOP sled
         return NOP * len(hexdata)
     if hexdata[0] == 15: # NEAR JUMP BYTE CHECK
