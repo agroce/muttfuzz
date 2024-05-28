@@ -73,7 +73,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       post_mutant_cmd="",
                       post_mutant_timeout=2.0,
                       status_cmd="",
-                      order=1):
+                      order=1,
+                      score=False):
     executable_code = mutate.get_code(executable)
     executable_jumps = mutate.get_jumps(executable, only_mutate, avoid_mutating)
     start_fuzz = time.time()
@@ -95,6 +96,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             reachability_filename = "/tmp/reachability_executable"
         else:
             reachability_filename = ""
+        if score:
+            mutants_run = 0.0
+            mutants_killed = 0.0
         while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
             print("=" * 10,
                   datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
@@ -127,7 +131,15 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             if mutant_ok:
                 print("FUZZING MUTANT...")
                 start_run = time.time()
-                silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
+                r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
+                if score:
+                    mutants_run += 1
+                    if (r != 0):
+                        mutants_killed += 1
+                        print ("** MUTANT KILLED **")
+                    else:
+                        print ("** MUTANT NOT KILLED **")
+                    print ("RUNNING MUTATION SCORE ON", int(mutants_run), "MUTANTS:", str(round((mutants_killed / mutants_run)*100.0, 2)) + "%")
                 print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
                 if post_mutant_cmd != "":
                     restore_executable(executable, executable_code) # Might need original for post
@@ -146,6 +158,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         if status_cmd != "":
             print("FINAL STATUS:")
             subprocess.call(status_cmd, shell=True)
+        if score:
+            print ("FINAL MUTATION SCORE OVER", int(mutants_run), "MUTANTS:", str(round((mutants_killed / mutants_run)*100.0, 2)) + "%")
+            print ("NOTE:  MUTANTS MAY BE REDUNDANT")
     finally:
         # always restore the original binary!
         restore_executable(executable, executable_code)

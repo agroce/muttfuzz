@@ -39,10 +39,12 @@ def parse_args():
                         help='command to run after each mutant (e.g., fuzz of original)')
     parser.add_argument('--post_mutant_timeout', type=float, default=2.0,
                         help='timeout for post-mutant command')
-    parser.add_argument('--order', type=int, default=1,
-                        help='mutation order (default 1)')
     parser.add_argument('--status_cmd', type=str, default="",
                         help='command to execute to show fuzzing stats')
+    parser.add_argument('--order', type=int, default=1,
+                        help='mutation order (default 1)')
+    parser.add_argument('-s', '--score', action='store_true',
+                        help="compute a mutation score, instead of fuzzing.")
 
     parsed_args = parser.parse_args(sys.argv[1:])
     return (parsed_args, parser)
@@ -82,7 +84,8 @@ def main():
                                    config.post_mutant_cmd,
                                    config.post_mutant_timeout,
                                    config.status_cmd,
-                                   config.order)
+                                   config.order,
+                                   config.score)
     except IndexError:
         print("Target binary seems to have no jumps, so mutation will not do anything!")
 
