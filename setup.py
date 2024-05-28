@@ -5,7 +5,7 @@ import sys, os
 
 setup(
     name='muttfuzz',
-    version='0.7.7',
+    version='0.7.8',
     description='Fuzzing with mutants',
     long_description_content_type="text/markdown",
     long_description=open('README.md').read(),

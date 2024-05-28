@@ -129,8 +129,11 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
                 print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
                 if post_mutant_cmd != "":
-                    subprocess.call(post_mutant_cmd, shell=True)
+                    restore_executable(executable, executable_code) # Might need original for post
+                    print("RUNNING POST-MUTANT COMMAND")
+                    silent_run_with_timeout(post_mutant_cmd, post_mutant_timeout)
                 if status_cmd != "":
+                    restore_executable(executable, executable_code) # Might need for status
                     print("STATUS:")
                     subprocess.call(status_cmd, shell=True)
 
