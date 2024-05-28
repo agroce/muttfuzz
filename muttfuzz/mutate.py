@@ -71,15 +71,16 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
 
 def different_jump(hexdata):
     P_DC = 0.40 # P(Don't Care)
+    P_DC_JMP = P_DC / (1 - P_DC)
     # Current approach is to change to "don't care" (take or avoid) 80% of time, mutate 20%
     if (random.random() <= P_DC): # Just remove the jump by providing a NOP sled
         return NOP * len(hexdata)
     if hexdata[0] == 15: # NEAR JUMP BYTE CHECK
-        if random.random() <= P_DC:
+        if random.random() <= P_DC_JMP:
             return NEAR_JUMPS[-1]
         return random.choice(list(filter(lambda j: j[1] != hexdata[1], NEAR_JUMPS[:-1])))
     else:
-        if random.random() <= P_DC:
+        if random.random() <= P_DC_JMP:
             return SHORT_JUMPS[-1]
         return random.choice(list(filter(lambda j: j[0] != hexdata[0], SHORT_JUMPS[:-1])))
 
