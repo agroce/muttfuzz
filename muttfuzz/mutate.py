@@ -88,12 +88,12 @@ def pick_and_change(jumps):
     changed = different_jump(jumps[loc][1])
     print("MUTATING JUMP IN", jumps[loc][2], "WITH ORIGINAL OPCODE", jumps[loc][0])
     print("ORIGINAL CODE:", jumps[loc][3])
-    if changed[0] == NOP:
-        print("CHANGING TO NOP")
-    elif changed in SHORT_NAMES:
+    if changed in SHORT_NAMES:
         print("CHANGING TO", SHORT_NAMES[changed])
-    else:
+    elif changed in NEAR_NAMES:
         print("CHANGING TO", NEAR_NAMES[changed])
+    else:
+        print("CHANGING TO NOPS")
     return (loc, changed)
 
 def get_code(filename):
