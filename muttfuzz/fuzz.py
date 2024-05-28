@@ -80,6 +80,7 @@ def main():
                                    config.initial_budget,
                                    config.post_initial_cmd,
                                    config.post_mutant_cmd,
+                                   config.post_mutant_timeout,
                                    config.status_cmd,
                                    config.order)
     except IndexError:

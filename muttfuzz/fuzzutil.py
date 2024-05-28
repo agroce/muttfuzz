@@ -71,6 +71,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       initial_budget=0,
                       post_initial_cmd="",
                       post_mutant_cmd="",
+                      post_mutant_timeout=2.0,
                       status_cmd="",
                       order=1):
     executable_code = mutate.get_code(executable)
