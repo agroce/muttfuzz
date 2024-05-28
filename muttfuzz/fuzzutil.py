@@ -94,11 +94,14 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
 
         if reachability_check_cmd != "":
             reachability_filename = "/tmp/reachability_executable"
+            reachability_checks = 0.0
+            reachability_hits = 0.0
         else:
             reachability_filename = ""
         if score:
             mutants_run = 0.0
             mutants_killed = 0.0
+            fraction_mutant = 1.0 # No final fuzz for mutation score estimation!
         while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
             print("=" * 10,
                   datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
@@ -112,6 +115,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             mutant_ok = True
             if reachability_check_cmd != "":
                 print("CHECKING REACHABILITY")
+                reachability_checks += 1.0
                 os.rename(reachability_filename, executable)
                 subprocess.check_call(['chmod', '+x', executable])
                 r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout)
@@ -119,6 +123,10 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 if r == 0:
                     print("MUTANT IS NOT REACHABLE (RETURN CODE 0)")
                     mutant_ok = False
+                else:
+                    reachability_hits += 1.0
+                print ("RUNNING COVERAGE ESTIMATE OVER", int(mutants_run), "MUTANTS:",
+                       str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
             if mutant_ok:
                 os.rename("/tmp/new_executable", executable)
                 subprocess.check_call(['chmod', '+x', executable])
@@ -139,7 +147,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                         print ("** MUTANT KILLED **")
                     else:
                         print ("** MUTANT NOT KILLED **")
-                    print ("RUNNING MUTATION SCORE ON", int(mutants_run), "MUTANTS:", str(round((mutants_killed / mutants_run)*100.0, 2)) + "%")
+                    print ("RUNNING MUTATION SCORE ON", int(mutants_run), "MUTANTS:",
+                           str(round((mutants_killed / mutants_run) * 100.0, 2)) + "%")
                 print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
                 if post_mutant_cmd != "":
                     restore_executable(executable, executable_code) # Might need original for post
@@ -158,8 +167,12 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         if status_cmd != "":
             print("FINAL STATUS:")
             subprocess.call(status_cmd, shell=True)
+        if reachability_check_cmd != "":
+            print ("FINAL COVERAGE ESTIMATE OVER", int(mutants_run), "MUTANTS:",
+                   str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
         if score:
-            print ("FINAL MUTATION SCORE OVER", int(mutants_run), "MUTANTS:", str(round((mutants_killed / mutants_run)*100.0, 2)) + "%")
+            print ("FINAL MUTATION SCORE OVER", int(mutants_run), "MUTANTS:",
+                    str(round((mutants_killed / mutants_run) * 100.0, 2)) + "%")
             print ("NOTE:  MUTANTS MAY BE REDUNDANT")
     finally:
         # always restore the original binary!

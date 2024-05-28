@@ -58,6 +58,8 @@ This example shows how to use MuttFuzz with AFL (or AFLplusplus) but using it wi
 
 **A**: Yes, just use a fuzzing command that does nothing but check a mutant for detection (something like the commands used for reachability and pruning) that returns non-zero on detected mutants, and add the `--score` option.  Note that MuttFuzz uses a peculiar and biased set of mutation operators, and may score the same mutant multiple times, so take this value with a grain of salt.  You can also have the fuzzing command do some actual fuzzing, and then check for detection after the fuzzing.
 
+Note that reachability and pruning work as usual here.  Pruning will seldom be needed, but there may be some notion of invalid mutants you want to use.  Reachability lets you compute  a score over mutants the corpus actually executes, which is usually more informative than including mutants not even executed.  The distinction is between "mutation score" and "covered mutation score" (see [this paper](https://agroce.github.io/issre23.pdf)).  Note that MuttFuzz, when a reachability check is included, always shows a running and final total of estimated coverage of mutants.
+
 **Q**: Why "MuttFuzz"?
 
 **A**: When I (Alex) created the repo, I made a typo, but I liked it.  Certainly memorable compared to "mutfuzz" for "mutant fuzzer".
