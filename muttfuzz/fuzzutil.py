@@ -29,9 +29,9 @@ def time_limit(seconds):
 
 def restore_executable(executable, executable_code):
     # We do this because it could still be busy if fuzzer hasn't shut down yet
-    with open("/tmp/new_executable", 'wb') as f:
+    with open("/tmp/restore_executable", 'wb') as f:
         f.write(executable_code)
-    os.rename("/tmp/new_executable", executable)
+    os.rename("/tmp/restore_executable", executable)
     subprocess.check_call(['chmod', '+x', executable])
 
 
