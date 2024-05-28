@@ -125,7 +125,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     mutant_ok = False
                 else:
                     reachability_hits += 1.0
-                print ("RUNNING COVERAGE ESTIMATE OVER", int(mutants_run), "MUTANTS:",
+                print ("RUNNING COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
                        str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
             if mutant_ok:
                 os.rename("/tmp/new_executable", executable)
@@ -168,7 +168,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             print("FINAL STATUS:")
             subprocess.call(status_cmd, shell=True)
         if reachability_check_cmd != "":
-            print ("FINAL COVERAGE ESTIMATE OVER", int(mutants_run), "MUTANTS:",
+            print ("FINAL COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
                    str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
         if score:
             print ("FINAL MUTATION SCORE OVER", int(mutants_run), "MUTANTS:",
