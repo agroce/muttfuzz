@@ -1,8 +1,6 @@
 import random
 import subprocess
 
-from muttfuzz import fuzzutil
-
 JUMP_OPCODES = ["je", "jne", "jl", "jle", "jg", "jge"]
 SHORT_JUMPS = list(map(bytes.fromhex, ["74", "75", "7C", "7D", "7E", "7F", "EB"]))
 SHORT_NAMES = dict(zip(SHORT_JUMPS, ["je", "jne", "jl", "jge", "jle", "jg", "jmp"]))
@@ -10,7 +8,6 @@ NEAR_JUMPS = list(map(bytes.fromhex, ["0F 84", "0F 85", "0F 8C", "0F 8D", "0F 8E
 NEAR_NAMES = dict(zip(NEAR_JUMPS, ["je", "jne", "jl", "jge", "jle", "jg", "jmp"]))
 
 NOP = bytes.fromhex("90") # Needed to erase a jump
-
 HALT = bytes.fromhex("F4") # Needed for reachability check
 
 # known markers for fuzzer/compiler injected instrumentation/etc.
@@ -101,26 +98,31 @@ def get_code(filename):
     with open(filename, "rb") as f:
         return bytearray(f.read())
 
-def check_reachable(code, loc, reachability_check):
-    new_code[loc] = HALT
-    # need code to actually generate and change
-    return True
-
 def mutant_from(code, jumps, order=1):
     new_code = bytearray(code)
+    reach_code = bytearray(code)
     for i in range(order): # allows higher-order mutants, though can undo mutations
         (loc, new_data) = pick_and_change(jumps)
+        reach_code[loc] = HALT
         for offset in range(0, len(new_data)):
             new_code[loc + offset] = new_data[offset]
-    return new_code
+    return (new_code, reach_code)
 
 def mutant(filename, order=1, avoid_mutating=[]):
     return mutant_from(get_code(filename), get_jumps(filename, avoid_mutating), order=order)
 
-def mutate_from(code, jumps, new_filename, order=1, reachability_check=""):
+def mutate_from(code, jumps, new_filename, order=1, reachability_filename=""):
+    (m, r) = mutant_from(code, jumps, order=order)
     with open(new_filename, 'wb') as f:
-        f.write(mutant_from(code, jumps, order=order))
+        f.write(m)
+    if reachability_filename != "":
+        with open(reachability_filename, "wb") as f:
+            f.write(r)
 
-def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_check=""):
+def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename=""):
+    (m, r) = mutant(filename, order=order, avoid_mutating=avoid_mutating)
     with open(new_filename, "wb") as f:
-        f.write(mutant(filename, order=order, avoid_mutating=avoid_mutating))
+        f.write(m)
+    if reachability_filename != "":
+        with open(reachability_filename, "wb") as f:
+            f.write(r)

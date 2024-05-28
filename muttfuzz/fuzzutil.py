@@ -63,8 +63,10 @@ def silent_run_with_timeout(cmd, timeout):
 def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_mutant,
                       only_mutate=[],
                       avoid_mutating=[],
+                      reachability_check_cmd="",
+                      reachability_check_timeout=2.0,
                       prune_mutant_cmd="",
-                      prune_mutant_timeout=1,
+                      prune_mutant_timeout=2.0,
                       initial_fuzz_cmd="",
                       initial_budget=0,
                       post_initial_cmd="",
@@ -88,6 +90,10 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             if post_initial_cmd != "":
                 subprocess.call(post_initial_cmd, shell=True)
 
+        if reachability_check_cmd != "":
+            reachability_filename = "/tmp/reachability_executable"
+        else:
+            reachability_filename = ""
         while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
             print("=" * 10,
                   datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
@@ -96,16 +102,27 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                   "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
             mutant_no += 1
             # make a new mutant of the executable; rename avoids hitting a busy executable
-            mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order)
-            os.rename("/tmp/new_executable", executable)
-            subprocess.check_call(['chmod', '+x', executable])
+            mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order,
+                               reachability_filename=reachability_filename)
             mutant_ok = True
-            if prune_mutant_cmd != "":
-                print("CHECKING MUTANT...")
-                r = silent_run_with_timeout(prune_mutant_cmd, prune_mutant_timeout)
-                if r != 0:
-                    print("CHECK FAILED WITH RETURN CODE", r)
+            if reachability_check_cmd != "":
+                print("CHECKING REACHABILITY")
+                os.rename(reachability_filename, executable)
+                subprocess.check_call(['chmod', '+x', executable])
+                r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout)
+                restore_executable(executable, executable_code)
+                if r == 0:
+                    print("MUTANT IS NOT REACHABLE (RETURN CODE 0)")
                     mutant_ok = False
+            if mutant_ok:
+                os.rename("/tmp/new_executable", executable)
+                subprocess.check_call(['chmod', '+x', executable])
+                if prune_mutant_cmd != "":
+                    print("PRUNING MUTANT...")
+                    r = silent_run_with_timeout(prune_mutant_cmd, prune_mutant_timeout)
+                    if r != 0:
+                        print("CHECK FAILED WITH RETURN CODE", r)
+                        mutant_ok = False
             if mutant_ok:
                 print("FUZZING MUTANT...")
                 start_run = time.time()

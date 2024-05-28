@@ -21,6 +21,10 @@ def parse_args():
                         help='string with comma delimited list of functions patterns to mutate (match by simple inclusion)')
     parser.add_argument('--avoid_mutating', type=str, default="",
                         help='string with comma delimited list of function patterns not to mutate (match by simple inclusion)')
+    parser.add_argument('--reachability_check_cmd', type=str, default="",
+                        help='command to check reachability; should return non-zero if some inputs crash')
+    parser.add_argument('--reachability_check_timeout', type=float, default=2.0,
+                        help='timeout for mutant check')
     parser.add_argument('--prune_mutant_cmd', type=str, default="",
                         help='command to check mutants for validity/interest')
     parser.add_argument('--prune_mutant_timeout', type=float, default=2.0,
@@ -66,6 +70,8 @@ def main():
                                    config.fraction_mutant,
                                    list(filter(None, config.only_mutate.replace(", ", ",").split(","))),
                                    list(filter(None, config.avoid_mutating.replace(", ", ",").split(","))),
+                                   config.reachability_check_cmd,
+                                   config.reachability_check_timeout,
                                    config.prune_mutant_cmd,
                                    config.prune_mutant_timeout,
                                    config.initial_fuzz_cmd,
