@@ -1,7 +1,7 @@
 import random
 import subprocess
 
-import muttfuzz import fuzzutil
+from muttfuzz import fuzzutil
 
 JUMP_OPCODES = ["je", "jne", "jl", "jle", "jg", "jge"]
 SHORT_JUMPS = list(map(bytes.fromhex, ["74", "75", "7C", "7D", "7E", "7F", "EB"]))
