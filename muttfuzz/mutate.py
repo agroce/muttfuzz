@@ -103,7 +103,7 @@ def mutant_from(code, jumps, order=1):
     reach_code = bytearray(code)
     for i in range(order): # allows higher-order mutants, though can undo mutations
         (loc, new_data) = pick_and_change(jumps)
-        reach_code[loc] = HALT
+        reach_code[loc] = HALT[0]
         for offset in range(0, len(new_data)):
             new_code[loc + offset] = new_data[offset]
     return (new_code, reach_code)
