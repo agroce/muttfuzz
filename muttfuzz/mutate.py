@@ -103,6 +103,8 @@ def pick_and_change(jumps):
         print("CHANGING TO", NEAR_NAMES[changed])
     else:
         print("CHANGING TO NOPS")
+    if len(changed) < len(jumps[loc][1]):
+        changed = changed + jumps[loc][1][len(jumps[loc][1]) - len(changed) - 1:]
     return (loc, changed)
 
 def get_code(filename):
