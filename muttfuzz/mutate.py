@@ -116,9 +116,9 @@ def mutant_from(code, jumps, order=1):
         (loc, new_data) = pick_and_change(jumps)
         for offset in range(0, len(new_data)):
             if offset == 0:
-                reach_code[offset] = HALT[0]
+                reach_code[loc + offset] = HALT[0]
             else:
-                reach_code[offset] = NOP[0]
+                reach_code[loc + offset] = NOP[0]
             new_code[loc + offset] = new_data[offset]
     return (new_code, reach_code)
 
