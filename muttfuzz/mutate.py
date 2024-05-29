@@ -64,7 +64,10 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
                 if opcode in JUMP_OPCODES:
                     loc_bytes = fields[0].split(":")[0]
                     loc = int(loc_bytes, 16) + section_offset
-                    jumps[loc] = (opcode, bytes.fromhex(fields[1]), section_name, line)
+                    jumps[loc] = {"opcode": opcode,
+                                  "hexdata": bytes.fromhex(fields[1]),
+                                  "section_name": section_name,
+                                  "code": line}
         except: # If we can't parse some line in the objdump, just skip it
             pass
 
@@ -94,17 +97,19 @@ def different_jump(hexdata):
 
 def pick_and_change(jumps):
     loc = random.choice(list(jumps.keys()))
-    changed = different_jump(jumps[loc][1])
-    print("MUTATING JUMP IN", jumps[loc][2], "WITH ORIGINAL OPCODE", jumps[loc][0])
-    print("ORIGINAL CODE:", jumps[loc][3])
+    jump = jumps[loc]
+    changed = different_jump(jump["hexdata"])
+    print("MUTATING JUMP IN", jump["section_name"], "WITH ORIGINAL OPCODE", jump["opcode"])
+    print("ORIGINAL CODE:", jump["code"])
     if changed in SHORT_NAMES:
         print("CHANGING TO", SHORT_NAMES[changed])
     elif changed in NEAR_NAMES:
         print("CHANGING TO", NEAR_NAMES[changed])
     else:
         print("CHANGING TO NOPS")
-    if len(changed) < len(jumps[loc][1]):
-        changed = changed + jumps[loc][1][len(jumps[loc][1]) - len(changed) - 1:]
+    full_change = bytearray(jump["hexdata"]) # lets us write the correct set of NOPs for HALT insertion
+    for i in range(len(changed)):
+        full_change[i] = changed[i]
     return (loc, changed)
 
 def get_code(filename):
