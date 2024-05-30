@@ -12,7 +12,9 @@ NEAR_OPPOSITES = list(map(bytes.fromhex, ["0F 85", "0F 84", "0F 8D", "0F 8C", "0
 NEAR_FLIP = dict(zip(map(lambda x: x[1], NEAR_JUMPS[:-1]), NEAR_OPPOSITES))
 
 NOP = bytes.fromhex("90") # Needed to erase a jump
+NOP_OP = NOP[0]
 HALT = bytes.fromhex("F4") # Needed for reachability check
+HALT_OP = HALT[0]
 
 # known markers for fuzzer/compiler injected instrumentation/etc.
 INST_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov", "AFL_"]
@@ -123,9 +125,9 @@ def mutant_from(code, jumps, order=1):
         (loc, new_data) = pick_and_change(jumps)
         for offset in range(0, len(new_data)):
             if offset == 0:
-                reach_code[loc + offset] = HALT[0]
+                reach_code[loc + offset] = HALT_OP
             else:
-                reach_code[loc + offset] = NOP[0]
+                reach_code[loc + offset] = NOP_OP
             new_code[loc + offset] = new_data[offset]
     return (new_code, reach_code)
 

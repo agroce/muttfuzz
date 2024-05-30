@@ -127,9 +127,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             fraction_mutant = 1.0 # No final fuzz for mutation score estimation!
         while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
             mutant_no += 1
-            print("=" * 10,
+            print("=" * 30,
                   datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
-                  "=" * 10)
+                  "=" * 30)
             print(round(time.time() - start_fuzz, 2),
                   "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
             # make a new mutant of the executable; rename avoids hitting a busy executable
@@ -138,6 +138,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                                save_count = mutant_no)
             mutant_ok = True
             if reachability_check_cmd != "":
+                print()
+                print("=" * 40)
                 print("CHECKING REACHABILITY")
                 reachability_checks += 1.0
                 os.rename(reachability_filename, executable)
@@ -151,19 +153,26 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     reachability_hits += 1.0
                 print ("RUNNING COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
                        str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
+                print("=" * 40)
             if mutant_ok:
                 os.rename("/tmp/new_executable", executable)
                 subprocess.check_call(['chmod', '+x', executable])
                 if prune_mutant_cmd != "":
+                    print()
+                    print("=" * 40)
                     print("PRUNING MUTANT...")
                     r = silent_run_with_timeout(prune_mutant_cmd, prune_mutant_timeout)
                     if r != 0:
                         print("CHECK FAILED WITH RETURN CODE", r)
                         mutant_ok = False
+                    print("=" * 40)
             if mutant_ok:
+                print()
+                print("=" * 40)
                 print("FUZZING MUTANT...")
                 start_run = time.time()
                 r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
+                print("=" * 40)
                 if score:
                     mutants_run += 1
                     if (r != 0):
