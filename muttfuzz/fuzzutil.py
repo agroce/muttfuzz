@@ -101,7 +101,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         print(section, len(section_jumps[section]))
     print()
     start_fuzz = time.time()
-    mutant_no = 1
+    mutant_no = 0
     try:
         if initial_fuzz_cmd != "":
             print("=" * 10,
@@ -126,12 +126,12 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             mutants_killed = 0.0
             fraction_mutant = 1.0 # No final fuzz for mutation score estimation!
         while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
+            mutant_no += 1
             print("=" * 10,
                   datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
                   "=" * 10)
             print(round(time.time() - start_fuzz, 2),
                   "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
-            mutant_no += 1
             # make a new mutant of the executable; rename avoids hitting a busy executable
             mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order,
                                reachability_filename=reachability_filename, save_mutants=save_mutants,
