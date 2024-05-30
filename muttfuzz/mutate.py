@@ -132,18 +132,23 @@ def mutant_from(code, jumps, order=1):
 def mutant(filename, order=1, avoid_mutating=[]):
     return mutant_from(get_code(filename), get_jumps(filename, avoid_mutating), order=order)
 
-def mutate_from(code, jumps, new_filename, order=1, reachability_filename=""):
-    (m, r) = mutant_from(code, jumps, order=order)
-    with open(new_filename, 'wb') as f:
-        f.write(m)
-    if reachability_filename != "":
-        with open(reachability_filename, "wb") as f:
-            f.write(r)
-
-def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename=""):
-    (m, r) = mutant(filename, order=order, avoid_mutating=avoid_mutating)
+def write_files(mutant, reach, new_filename, reachability_filename="", save_mutants="", save_count=0):
     with open(new_filename, "wb") as f:
-        f.write(m)
+        f.write(mutant)
+    if save_mutants != "":
+        with open(save_mutants + "/mutant_" + str(save_count), "wb") as f:
+            f.write(mutant)
     if reachability_filename != "":
         with open(reachability_filename, "wb") as f:
-            f.write(r)
+            f.write(reach)
+        if save_mutants != "":
+            with open(save_mutants + "/reach_" + str(save_count), "wb") as f:
+                f.write(reach)
+
+def mutate_from(code, jumps, new_filename, order=1, reachability_filename="", save_mutants="", save_count=0):
+    (m, r) = mutant_from(code, jumps, order=order)
+    write_files(m, r, new_filename, reachability_filename, save_mutants, save_count)
+
+def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename="", save_mutants="", save_count=0):
+    (m, r) = mutant(filename, order=order, avoid_mutating=avoid_mutating)
+    write_files(m, r, new_filename, reachability_filename, save_mutants, save_count)

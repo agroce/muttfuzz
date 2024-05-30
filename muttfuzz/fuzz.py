@@ -45,6 +45,8 @@ def parse_args():
                         help='mutation order (default 1)')
     parser.add_argument('-s', '--score', action='store_true',
                         help="compute a mutation score, instead of fuzzing.")
+    parser.add_argument('--save_mutants', type=str, default="",
+                        help='directory in which to save generated mutants/checks; no saving if not provided or empty')
 
     parsed_args = parser.parse_args(sys.argv[1:])
     return (parsed_args, parser)
@@ -85,7 +87,8 @@ def main():
                                    config.post_mutant_timeout,
                                    config.status_cmd,
                                    config.order,
-                                   config.score)
+                                   config.score,
+                                   config.save_mutants)
     except IndexError:
         print("Target binary seems to have no jumps, so mutation will not do anything!")
 

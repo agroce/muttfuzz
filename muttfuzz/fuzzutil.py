@@ -37,6 +37,8 @@ def restore_executable(executable, executable_code):
 
 def silent_run_with_timeout(cmd, timeout):
     dnull = open(os.devnull, 'w')
+    print("*" * 80)
+    print("EXECUTING", cmd)
     start_P = time.time()
     try:
         with open("cmd_errors.txt", 'w') as cmd_errors:
@@ -56,7 +58,11 @@ def silent_run_with_timeout(cmd, timeout):
             print("\n".join(cmd_errors_out.split("\n")[-20:]))
     finally:
         if P.poll() is None:
+            print("KILLING SUBPROCESS DUE TO TIMEOUT")
             os.killpg(os.getpgid(P.pid), signal.SIGTERM)
+    print("COMPLETE IN", round(time.time() - start_P, 2), "SECONDS")
+    print("*" * 80)
+
     return P.returncode
 
 
@@ -74,9 +80,21 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       post_mutant_timeout=2.0,
                       status_cmd="",
                       order=1,
-                      score=False):
+                      score=False,
+                      save_mutants=""):
     executable_code = mutate.get_code(executable)
     executable_jumps = mutate.get_jumps(executable, only_mutate, avoid_mutating)
+    print("FOUND", len(executable_jumps), "JUMPS")
+    print("JUMPS BY SECTION:")
+    section_jumps = {}
+    for jump in executable_jumps:
+        if jump["section_name"] not in section_jumps:
+            section_jumps[jump["section_name"]] = [jump]
+        else:
+            section_jumps[jump["section_name"]].append(jump)
+    for section in section_jumps:
+        print(section, len(section_jumps[section]))
+    print()
     start_fuzz = time.time()
     mutant_no = 1
     try:
@@ -111,7 +129,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             mutant_no += 1
             # make a new mutant of the executable; rename avoids hitting a busy executable
             mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order,
-                               reachability_filename=reachability_filename)
+                               reachability_filename=reachability_filename, save_mutants=save_mutants,
+                               save_count = mutant_no)
             mutant_ok = True
             if reachability_check_cmd != "":
                 print("CHECKING REACHABILITY")
