@@ -226,17 +226,25 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         if reachability_check_cmd != "":
             for section in section_coverage:
                 (hits, total) = section_coverage[section]
-                print(section + ":", str(round((hits / total) * 100.0, 2)) + "% COVERAGE")
-
-            print ("FINAL COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
+                if total > 0:
+                    print(section + ":", str(round((hits / total) * 100.0, 2)) + "% COVERAGE")
+                else:
+                    print(section + ": NO COVERAGE CHECKS")
+            print("FINAL COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
                    str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
 
         if score:
             for section in section_score:
                 (kills, total) = section_score[section]
-                print(section + ":", str(round((kills / total) * 100.0, 2)) + "% MUTATION SCORE")
-            print ("FINAL MUTATION SCORE OVER", int(mutants_run), "MUTANTS:",
-                    str(round((mutants_killed / mutants_run) * 100.0, 2)) + "%")
+                if total > 0:
+                    print(section + ":", str(round((kills / total) * 100.0, 2)) + "% MUTATION SCORE")
+                else:
+                    print(section + ": NO MUTANTS EXECUTED")
+            if mutants_run > 0:
+                print("FINAL MUTATION SCORE OVER", int(mutants_run), "MUTANTS:",
+                        str(round((mutants_killed / mutants_run) * 100.0, 2)) + "%")
+            else:
+                print("NO MUTANTS EXECUTED!")
             print ("NOTE:  MUTANTS MAY BE REDUNDANT")
 
     finally:
