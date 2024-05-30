@@ -112,24 +112,26 @@ def pick_and_change(jumps):
     full_change = bytearray(jump["hexdata"]) # lets us write the correct set of NOPs for HALT insertion
     for i in range(len(changed)):
         full_change[i] = changed[i]
-    return (loc, changed)
+    return (jump["section_name"], loc, changed)
 
 def get_code(filename):
     with open(filename, "rb") as f:
         return bytearray(f.read())
 
 def mutant_from(code, jumps, order=1):
+    sections = []
     new_code = bytearray(code)
     reach_code = bytearray(code)
     for i in range(order): # allows higher-order mutants, though can undo mutations
-        (loc, new_data) = pick_and_change(jumps)
+        (section, loc, new_data) = pick_and_change(jumps)
+        sections.append(section)
         for offset in range(0, len(new_data)):
             if offset == 0:
                 reach_code[loc + offset] = HALT_OP
             else:
                 reach_code[loc + offset] = NOP_OP
             new_code[loc + offset] = new_data[offset]
-    return (new_code, reach_code)
+    return (sections, new_code, reach_code)
 
 def mutant(filename, order=1, avoid_mutating=[]):
     return mutant_from(get_code(filename), get_jumps(filename, avoid_mutating), order=order)
@@ -148,9 +150,11 @@ def write_files(mutant, reach, new_filename, reachability_filename="", save_muta
                 f.write(reach)
 
 def mutate_from(code, jumps, new_filename, order=1, reachability_filename="", save_mutants="", save_count=0):
-    (m, r) = mutant_from(code, jumps, order=order)
-    write_files(m, r, new_filename, reachability_filename, save_mutants, save_count)
+    (sections, mutant, reach) = mutant_from(code, jumps, order=order)
+    write_files(mutant, reach, new_filename, reachability_filename, save_mutants, save_count)
+    return sections
 
 def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename="", save_mutants="", save_count=0):
-    (m, r) = mutant(filename, order=order, avoid_mutating=avoid_mutating)
-    write_files(m, r, new_filename, reachability_filename, save_mutants, save_count)
+    (sections, mutant, reach) = mutant(filename, order=order, avoid_mutating=avoid_mutating)
+    write_files(mutant, reach, new_filename, reachability_filename, save_mutants, save_count)
+    return sections
