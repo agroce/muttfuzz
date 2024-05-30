@@ -82,16 +82,21 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       order=1,
                       score=False,
                       save_mutants=""):
+    print("*" * 80)
+    print("STARTING MUTTFUZZ")
+    print()
     executable_code = mutate.get_code(executable)
+    print("READ EXECUTABLE WITH", len(executable_code), "BYTES")
     executable_jumps = mutate.get_jumps(executable, only_mutate, avoid_mutating)
-    print("FOUND", len(executable_jumps), "JUMPS")
+    print("FOUND", len(executable_jumps), "MUTABLE JUMPS IN EXECUTABLE")
     print("JUMPS BY SECTION:")
     section_jumps = {}
-    for jump in executable_jumps:
+    for loc in executable_jumps:
+        jump = executable_jumps[loc]
         if jump["section_name"] not in section_jumps:
-            section_jumps[jump["section_name"]] = [jump]
+            section_jumps[jump["section_name"]] = [(loc, jump)]
         else:
-            section_jumps[jump["section_name"]].append(jump)
+            section_jumps[jump["section_name"]].append((loc, jump))
     for section in section_jumps:
         print(section, len(section_jumps[section]))
     print()
