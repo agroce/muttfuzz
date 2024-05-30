@@ -37,7 +37,7 @@ def restore_executable(executable, executable_code):
 
 def silent_run_with_timeout(cmd, timeout):
     dnull = open(os.devnull, 'w')
-    print("*" * 80)
+    print("*" * 30)
     print("EXECUTING", cmd)
     start_P = time.time()
     try:
@@ -61,7 +61,7 @@ def silent_run_with_timeout(cmd, timeout):
             print("KILLING SUBPROCESS DUE TO TIMEOUT")
             os.killpg(os.getpgid(P.pid), signal.SIGTERM)
     print("COMPLETE IN", round(time.time() - start_P, 2), "SECONDS")
-    print("*" * 80)
+    print("*" * 30)
 
     return P.returncode
 
@@ -153,7 +153,6 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     reachability_hits += 1.0
                 print ("RUNNING COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
                        str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
-                print("=" * 40)
             if mutant_ok:
                 os.rename("/tmp/new_executable", executable)
                 subprocess.check_call(['chmod', '+x', executable])
@@ -165,14 +164,11 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     if r != 0:
                         print("CHECK FAILED WITH RETURN CODE", r)
                         mutant_ok = False
-                    print("=" * 40)
             if mutant_ok:
                 print()
-                print("=" * 40)
                 print("FUZZING MUTANT...")
                 start_run = time.time()
                 r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
-                print("=" * 40)
                 if score:
                     mutants_run += 1
                     if (r != 0):
