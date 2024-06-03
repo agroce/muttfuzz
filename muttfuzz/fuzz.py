@@ -53,7 +53,7 @@ def parse_args():
                         help='directory in which to save generated mutants/checks; no saving if not provided or empty')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='more verbose fuzzing, with command outputs')
-    parser.add_arugment('--skip_default_avoid', action='store_true',
+    parser.add_argument('--skip_default_avoid', action='store_true',
                         help='do not use the default list of sections to skip (e.g. printf)')
 
     parsed_args = parser.parse_args(sys.argv[1:])
