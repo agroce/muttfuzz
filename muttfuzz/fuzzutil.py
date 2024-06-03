@@ -159,6 +159,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         else:
             reachability_filename = ""
         while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
+            print("T:", (time.time() - start_fuzz) - initial_budget, (budget * fraction_mutant))
             mutant_no += 1
             print()
             print()
