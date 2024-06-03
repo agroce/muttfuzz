@@ -97,10 +97,22 @@ def different_jump(hexdata):
             return SHORT_JUMPS[-1]
         return random.choice(list(filter(lambda j: j[0] != hexdata[0], SHORT_JUMPS[:-1])))
 
-def pick_and_change(jumps):
-    loc = random.choice(list(jumps.keys()))
-    jump = jumps[loc]
-    changed = different_jump(jump["hexdata"])
+def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutants={}):
+    done = False
+    tries = 0
+    while not done:
+        tries += 1
+        loc = random.choice(list(jumps.keys()))
+        jump = jumps[loc]
+        changed = different_jump(jump["hexdata"])
+        if (not avoid_repeats) or ((loc, changed) not in visited_mutants):
+            done = True
+        if tries >= repeat_retries:
+            print("WARNING: HAD TO USE REPEAT MUTANT DUE TO RUNNING OUT OF RETRIES")
+            break
+    if avoid_repeats:
+        visited_mutants[(loc, changed)] = True
+
     print("MUTATING JUMP IN", jump["section_name"], "WITH ORIGINAL OPCODE", jump["opcode"])
     print("ORIGINAL CODE:", jump["code"])
     if changed in SHORT_NAMES:
@@ -118,12 +130,12 @@ def get_code(filename):
     with open(filename, "rb") as f:
         return bytearray(f.read())
 
-def mutant_from(code, jumps, order=1):
+def mutant_from(code, jumps, order=1, avoid_repeats=False, repeat_retries=20, visited_mutants={}):
     sections = []
     new_code = bytearray(code)
     reach_code = bytearray(code)
     for i in range(order): # allows higher-order mutants, though can undo mutations
-        (section, loc, new_data) = pick_and_change(jumps)
+        (section, loc, new_data) = pick_and_change(jumps, avoid_repeats, repeat_retries, visited_mutants)
         sections.append(section)
         for offset in range(0, len(new_data)):
             if offset == 0:
@@ -133,7 +145,7 @@ def mutant_from(code, jumps, order=1):
             new_code[loc + offset] = new_data[offset]
     return (sections, new_code, reach_code)
 
-def mutant(filename, order=1, avoid_mutating=[]):
+def mutant(filename, order=1, avoid_mutating=[], avoid_repeats=False, repeat_retries=20, visited_mutants={}):
     return mutant_from(get_code(filename), get_jumps(filename, avoid_mutating), order=order)
 
 def write_files(mutant, reach, new_filename, reachability_filename="", save_mutants="", save_count=0):
@@ -149,12 +161,17 @@ def write_files(mutant, reach, new_filename, reachability_filename="", save_muta
             with open(save_mutants + "/reach_" + str(save_count), "wb") as f:
                 f.write(reach)
 
-def mutate_from(code, jumps, new_filename, order=1, reachability_filename="", save_mutants="", save_count=0):
-    (sections, mutant, reach) = mutant_from(code, jumps, order=order)
-    write_files(mutant, reach, new_filename, reachability_filename, save_mutants, save_count)
+def mutate_from(code, jumps, new_filename, order=1, reachability_filename="", save_mutants="", save_count=0,
+                avoid_repeats=False, repeat_retries=20, visited_mutants={}):
+    (sections, new_mutant, new_reach) = mutant_from(code, jumps, order=order, avoid_repeats=avoid_repeats,
+                                            repeat_retries=repeat_retries, visited_mutants=visited_mutants)
+    write_files(new_mutant, new_reach, new_filename, reachability_filename, save_mutants, save_count)
     return sections
 
-def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename="", save_mutants="", save_count=0):
-    (sections, mutant, reach) = mutant(filename, order=order, avoid_mutating=avoid_mutating)
-    write_files(mutant, reach, new_filename, reachability_filename, save_mutants, save_count)
+def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename="", save_mutants="",
+           save_count=0, avoid_repeats=False, repeat_retries=20, visited_mutants={}):
+    (sections, new_mutant, new_reach) = mutant(filename, order=order, avoid_mutating=avoid_mutating,
+                                       avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
+                                       visited_mutants=visited_mutants)
+    write_files(new_mutant, new_reach, new_filename, reachability_filename, save_mutants, save_count)
     return sections

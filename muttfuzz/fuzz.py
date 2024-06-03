@@ -44,9 +44,17 @@ def parse_args():
     parser.add_argument('--order', type=int, default=1,
                         help='mutation order (default 1)')
     parser.add_argument('-s', '--score', action='store_true',
-                        help="compute a mutation score, instead of fuzzing.")
+                        help='compute a mutation score, instead of fuzzing.')
+    parser.add_argument('--avoid_repeats', action='store_true',
+                        help='avoid using the same mutant multiple times, if possible')
+    parser.add_argument('--repeat_retries', type=int, default=20,
+                        help='number of times to retry to avoid a repeat mutant (default 20)')
     parser.add_argument('--save_mutants', type=str, default="",
                         help='directory in which to save generated mutants/checks; no saving if not provided or empty')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='more verbose fuzzing, with command outputs')
+    parser.add_arugment('--skip_default_avoid', action='store_true',
+                        help='do not use the default list of sections to skip (e.g. printf)')
 
     parsed_args = parser.parse_args(sys.argv[1:])
     return (parsed_args, parser)
@@ -88,7 +96,11 @@ def main():
                                    config.status_cmd,
                                    config.order,
                                    config.score,
-                                   config.save_mutants)
+                                   config.avoid_repeats,
+                                   config.repeat_retries,
+                                   config.save_mutants,
+                                   config.verbose,
+                                   config.skip_default_avoid)
     except IndexError:
         print("Target binary seems to have no jumps, so mutation will not do anything!")
 

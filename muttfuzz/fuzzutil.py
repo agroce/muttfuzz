@@ -35,19 +35,22 @@ def restore_executable(executable, executable_code):
     subprocess.check_call(['chmod', '+x', executable])
 
 
-def silent_run_with_timeout(cmd, timeout):
+def silent_run_with_timeout(cmd, timeout, verbose):
     # Allow functions instead of commands, for use as a library from a script
-    print("*" * 30)
+    if verbose:
+        print("*" * 30)
     if callable(cmd):
         try:
-            print("CALLING FUNCTION", cmd)
+            if verbose:
+                print("CALLING FUNCTION", cmd)
             with time_limit(timeout):
                 return cmd()
         except TimeoutException:
             print("ABORTED WITH TIMEOUT")
             return 1 # non-zero return code may be interpreted as failure/crash/timeout
     dnull = open(os.devnull, 'w')
-    print("EXECUTING", cmd)
+    if verbose:
+        print("EXECUTING", cmd)
     start_P = time.time()
     try:
         with open("cmd_errors.txt", 'w') as cmd_errors:
@@ -62,15 +65,16 @@ def silent_run_with_timeout(cmd, timeout):
                 cmd_errors_out = cmd_errors.read()
             except:
                 cmd_errors_out = "ERROR READING OUTPUT"
-        if len(cmd_errors_out) > 0:
+        if verbose and len(cmd_errors_out) > 0:
             print("OUTPUT (TRUNCATED TO LAST 20 LINES):")
             print("\n".join(cmd_errors_out.split("\n")[-20:]))
     finally:
         if P.poll() is None:
             print("KILLING SUBPROCESS DUE TO TIMEOUT")
             os.killpg(os.getpgid(P.pid), signal.SIGTERM)
-    print("COMPLETE IN", round(time.time() - start_P, 2), "SECONDS")
-    print("*" * 30)
+    if verbose:
+        print("COMPLETE IN", round(time.time() - start_P, 2), "SECONDS")
+        print("*" * 30)
 
     return P.returncode
 
@@ -90,13 +94,24 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       status_cmd="",
                       order=1,
                       score=False,
-                      save_mutants=""):
+                      avoid_repeats=False,
+                      repeat_retries=20,
+                      save_mutants="",
+                      verbose=False,
+                      skip_default_avoid=False):
     print("*" * 80)
     print("STARTING MUTTFUZZ")
     print()
     executable_code = mutate.get_code(executable)
 
+    if not skip_default_avoid:
+        avoid_mutating.extend("LLVMFuzzOneInput", "printf")
+
+    visited_mutants = {}
+
     if score:
+        if not avoid_repeats:
+            print("WARNING: SCORE ESTIMATION WITHOUT --avoid_repeats WILL REPEAT SAMPLES")
         mutants_run = 0.0
         mutants_killed = 0.0
         fraction_mutant = 1.0 # No final fuzz for mutation score estimation!
@@ -130,7 +145,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                   datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
                   "=" * 10)
             print("RUNNING INITIAL FUZZING...")
-            silent_run_with_timeout(initial_fuzz_cmd, initial_budget)
+            silent_run_with_timeout(initial_fuzz_cmd, initial_budget, verbose)
             if status_cmd != "":
                 print("INITIAL STATUS:")
                 subprocess.call(status_cmd, shell=True)
@@ -154,14 +169,17 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             print(round(time.time() - start_fuzz, 2),
                   "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
             # make a new mutant of the executable; rename avoids hitting a busy executable
-            sections = mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable", order=order,
-                                          reachability_filename=reachability_filename, save_mutants=save_mutants,
-                                          save_count = mutant_no)
+            sections = mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable",
+                                          order=order, reachability_filename=reachability_filename,
+                                          save_mutants=save_mutants, save_count=mutant_no,
+                                          avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
+                                          visited_mutants=visited_mutants)
             mutant_ok = True
             if reachability_check_cmd != "":
-                print()
-                print("=" * 40)
-                print("CHECKING REACHABILITY")
+                if verbose:
+                    print()
+                    print("=" * 40)
+                    print("CHECKING REACHABILITY")
                 reachability_checks += 1.0
                 os.rename(reachability_filename, executable)
                 subprocess.check_call(['chmod', '+x', executable])
@@ -186,12 +204,13 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 os.rename("/tmp/new_executable", executable)
                 subprocess.check_call(['chmod', '+x', executable])
                 if prune_mutant_cmd != "":
-                    print()
-                    print("=" * 40)
-                    print("PRUNING MUTANT...")
+                    if verbose:
+                        print()
+                        print("=" * 40)
+                        print("PRUNING MUTANT...")
                     r = silent_run_with_timeout(prune_mutant_cmd, prune_mutant_timeout)
                     if r != 0:
-                        print("CHECK FAILED WITH RETURN CODE", r)
+                        print("PRUNING CHECK FAILED WITH RETURN CODE", r)
                         mutant_ok = False
             if mutant_ok:
                 print()
