@@ -100,7 +100,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       verbose=False,
                       skip_default_avoid=False):
     print("*" * 80)
-    print("STARTING MUTTFUZZ")
+    print("STARTING MUTTFUZZ WITH BUDGET", budget, "SECONDS")
     print()
     executable_code = mutate.get_code(executable)
 
@@ -261,8 +261,6 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     print(section + ":", str(round((hits / total) * 100.0, 2)) + "% COVERAGE")
                 else:
                     print(section + ": NO COVERAGE CHECKS")
-            print("FINAL COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
-                   str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
 
         if score:
             for section in section_score:
@@ -270,13 +268,24 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 if total > 0:
                     print(section + ":", str(round((kills / total) * 100.0, 2)) + "% MUTATION SCORE")
                 else:
-                    print(section + ": NO MUTANTS EXECUTED")
+                    if verbose:
+                        print(section + ": NO MUTANTS EXECUTED")
             if mutants_run > 0:
                 print("FINAL MUTATION SCORE OVER", int(mutants_run), "MUTANTS:",
                         str(round((mutants_killed / mutants_run) * 100.0, 2)) + "%")
             else:
                 print("NO MUTANTS EXECUTED!")
             print ("NOTE:  MUTANTS MAY BE REDUNDANT")
+
+        if reachability_check_cmd != "":
+            print("FINAL COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
+                  str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
+        if score:
+            if mutants_run > 0:
+                print("FINAL MUTATION SCORE OVER", int(mutants_run), "EXECUTED MUTANTS:",
+                        str(round((mutants_killed / mutants_run) * 100.0, 2)) + "%")
+            else:
+                print("NO MUTANTS EXECUTED!")
 
     finally:
         # always restore the original binary!
