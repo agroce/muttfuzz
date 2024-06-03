@@ -110,8 +110,10 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
         if tries >= repeat_retries:
             print("WARNING: HAD TO USE REPEAT MUTANT DUE TO RUNNING OUT OF RETRIES")
             break
-    if avoid_repeats:
-        visited_mutants[(loc, changed)] = True
+    if (loc, changed) not in visited_mutants:
+        visited_mutants[(loc, changed)] = 1
+    else:
+        visited_mutants[(loc, changed)] += 1
 
     print("MUTATING JUMP IN", jump["section_name"], "WITH ORIGINAL OPCODE", jump["opcode"])
     print("ORIGINAL CODE:", jump["code"])
