@@ -105,7 +105,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
     executable_code = mutate.get_code(executable)
 
     if not skip_default_avoid:
-        avoid_mutating.extend("LLVMFuzzOneInput", "printf")
+        avoid_mutating.extend(["LLVMFuzzOneInput", "printf"])
 
     visited_mutants = {}
 
