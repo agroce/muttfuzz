@@ -37,16 +37,16 @@ def restore_executable(executable, executable_code):
 
 def silent_run_with_timeout(cmd, timeout):
     # Allow functions instead of commands, for use as a library from a script
+    print("*" * 30)
     if callable(cmd):
         try:
             print("CALLING FUNCTION", cmd)
             with time_limit(timeout):
                 return cmd()
-            except TimeoutException:
-                print("ABORTED WITH TIMEOUT")
-                return 1 # non-zero return code may be interpreted as failure/crash/timeout
+        except TimeoutException:
+            print("ABORTED WITH TIMEOUT")
+            return 1 # non-zero return code may be interpreted as failure/crash/timeout
     dnull = open(os.devnull, 'w')
-    print("*" * 30)
     print("EXECUTING", cmd)
     start_P = time.time()
     try:
