@@ -183,7 +183,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 reachability_checks += 1.0
                 os.rename(reachability_filename, executable)
                 subprocess.check_call(['chmod', '+x', executable])
-                r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout)
+                r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout, verbose)
                 restore_executable(executable, executable_code)
                 if r == 0:
                     print("MUTANT IS NOT REACHABLE (RETURN CODE 0)")
@@ -208,7 +208,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                         print()
                         print("=" * 40)
                         print("PRUNING MUTANT...")
-                    r = silent_run_with_timeout(prune_mutant_cmd, prune_mutant_timeout)
+                    r = silent_run_with_timeout(prune_mutant_cmd, prune_mutant_timeout, verbose)
                     if r != 0:
                         print("PRUNING CHECK FAILED WITH RETURN CODE", r)
                         mutant_ok = False
@@ -216,7 +216,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 print()
                 print("FUZZING MUTANT...")
                 start_run = time.time()
-                r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant)
+                r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant, verbose)
                 if score:
                     mutants_run += 1
                     if (r != 0):
@@ -239,7 +239,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 if post_mutant_cmd != "":
                     restore_executable(executable, executable_code) # Might need original for post
                     print("RUNNING POST-MUTANT COMMAND")
-                    silent_run_with_timeout(post_mutant_cmd, post_mutant_timeout)
+                    silent_run_with_timeout(post_mutant_cmd, post_mutant_timeout, verbose)
                 if status_cmd != "":
                     restore_executable(executable, executable_code) # Might need for status
                     print("STATUS:")
@@ -248,7 +248,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
         print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
         restore_executable(executable, executable_code)
-        silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz))
+        silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz), verbose)
         print("COMPLETED ALL FUZZING AFTER", round(time.time() - start_fuzz, 2), "SECONDS")
         if status_cmd != "":
             print("FINAL STATUS:")
