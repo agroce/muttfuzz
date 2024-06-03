@@ -87,7 +87,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       prune_mutant_cmd="",
                       prune_mutant_timeout=2.0,
                       initial_fuzz_cmd="",
-                      initial_budget=0,
+                      initial_budget=60,
                       post_initial_cmd="",
                       post_mutant_cmd="",
                       post_mutant_timeout=2.0,
@@ -103,6 +103,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
     print("STARTING MUTTFUZZ WITH BUDGET", budget, "SECONDS")
     print()
     executable_code = mutate.get_code(executable)
+
+    if initial_fuzz_cmd == "":
+        initial_budget = 0
 
     if not skip_default_avoid:
         avoid_mutating.extend(["LLVMFuzzOneInput", "printf"])
@@ -159,7 +162,6 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         else:
             reachability_filename = ""
         while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
-            print("T:", (time.time() - start_fuzz) - initial_budget, (budget * fraction_mutant))
             mutant_no += 1
             print()
             print()
