@@ -108,7 +108,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         initial_budget = 0
 
     if not skip_default_avoid:
-        avoid_mutating.extend(["LLVMFuzzOneInput", "printf"])
+        avoid_mutating.extend(["LLVMFuzzerTestOneInput", "printf", "assert", "dtors", "fuzzer"])
 
     visited_mutants = {}
 
