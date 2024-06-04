@@ -110,7 +110,7 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
         if tries >= repeat_retries:
             print("WARNING: HAD TO USE REPEAT MUTANT DUE TO RUNNING OUT OF RETRIES")
             # Get all visited mutants and pick a random least-visited mutant
-            all_visited = visited_mutants.keys()
+            all_visited = list(visited_mutants.keys())
             random.shuffle(all_visited)
             all_visited = sorted(all_visited, key=lambda x: visited_mutants[x])
             (loc, changed) = all_visited[0]
