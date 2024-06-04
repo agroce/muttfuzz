@@ -220,7 +220,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 print("FUZZING MUTANT...")
                 start_run = time.time()
                 r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant, verbose)
+                print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
                 if score:
+                    print()
                     mutants_run += 1
                     if (r != 0):
                         mutants_killed += 1
@@ -238,7 +240,6 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     print ("RUNNING MUTATION SCORE ON", int(mutants_run), "MUTANTS:",
                            str(round((mutants_killed / mutants_run) * 100.0, 2)) + "%")
 
-                print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
                 if post_mutant_cmd != "":
                     restore_executable(executable, executable_code) # Might need original for post
                     print("RUNNING POST-MUTANT COMMAND")
