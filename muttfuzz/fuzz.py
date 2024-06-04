@@ -1,5 +1,6 @@
 import argparse
 from collections import namedtuple
+import random
 import sys
 
 from muttfuzz import fuzzutil
@@ -55,6 +56,8 @@ def parse_args():
                         help='more verbose fuzzing, with command outputs')
     parser.add_argument('--skip_default_avoid', action='store_true',
                         help='do not use the default list of sections to skip (e.g. printf)')
+    parser.add_argument('--seed', type=int, default=None,
+                        help='seed for random generation (default None)')
 
     parsed_args = parser.parse_args(sys.argv[1:])
     return (parsed_args, parser)
@@ -77,6 +80,8 @@ def main():
     parsed_args, _ = parse_args()
     config = make_config(parsed_args)
     try:
+        if config.seed is not None:
+            random.seed(config.seed)
         fuzzutil.fuzz_with_mutants(config.fuzzer_cmd,
                                    config.executable,
                                    config.budget,
