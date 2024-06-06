@@ -18,9 +18,9 @@ def parse_args():
                         help='max time to fuzz each mutant in seconds (default 300)')
     parser.add_argument('--fraction_mutant', type=float, default=0.5,
                         help='portion of budget to devote to mutants (default 0.5)')
-    parser.add_argument('--only_mutate', type=str, default=None,
+    parser.add_argument('--only_mutate', type=str, default="",
                         help='string with comma delimited list of function patterns to mutate (match by inclusion)')
-    parser.add_argument('--avoid_mutating', type=str, default=None,
+    parser.add_argument('--avoid_mutating', type=str, default="",
                         help='string with comma delimited list of function patterns NOT to mutate (match by simple inclusion)')
     parser.add_argument('--only_mutate_file', metavar='filename', type=str, default=None,
                         help='file with a list of functions that are to be mutated')
