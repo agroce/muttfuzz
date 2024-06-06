@@ -18,29 +18,33 @@ def parse_args():
                         help='max time to fuzz each mutant in seconds (default 300)')
     parser.add_argument('--fraction_mutant', type=float, default=0.5,
                         help='portion of budget to devote to mutants (default 0.5)')
-    parser.add_argument('--only_mutate', type=str, default="",
-                        help='string with comma delimited list of functions patterns to mutate (match by simple inclusion)')
-    parser.add_argument('--avoid_mutating', type=str, default="",
-                        help='string with comma delimited list of function patterns not to mutate (match by simple inclusion)')
-    parser.add_argument('--reachability_check_cmd', type=str, default="",
+    parser.add_argument('--only_mutate', type=str, default=None,
+                        help='string with comma delimited list of function patterns to mutate (match by inclusion)')
+    parser.add_argument('--avoid_mutating', type=str, default=None,
+                        help='string with comma delimited list of function patterns NOT to mutate (match by simple inclusion)')
+    parser.add_argument('--only_mutate_file', metavar='filename', type=str, default=None,
+                        help='file with a list of functions that are to be mutated')
+    parser.add_argument('--avoid_mutating_file', metavar='filename', type=str, default=None,
+                        help='file with a list of functions not to mutate')
+    parser.add_argument('--reachability_check_cmd', type=str, default=None,
                         help='command to check reachability; should return non-zero if some inputs crash')
     parser.add_argument('--reachability_check_timeout', type=float, default=2.0,
                         help='timeout for mutant check')
-    parser.add_argument('--prune_mutant_cmd', type=str, default="",
+    parser.add_argument('--prune_mutant_cmd', type=str, default=None,
                         help='command to check mutants for validity/interest')
     parser.add_argument('--prune_mutant_timeout', type=float, default=2.0,
                         help='timeout for mutant check')
-    parser.add_argument('--initial_fuzz_cmd', type=str, default="",
+    parser.add_argument('--initial_fuzz_cmd', type=str, default=None,
                         help='command for initial fuzzing before mutants')
     parser.add_argument('--initial_budget', type=int, default=60,
                         help='how long to run initial fuzzing, in seconds (default 60)')
-    parser.add_argument('--post_initial_cmd', type=str, default="",
+    parser.add_argument('--post_initial_cmd', type=str, default=None,
                         help='command to run after initial fuzzing')
-    parser.add_argument('--post_mutant_cmd', type=str, default="",
+    parser.add_argument('--post_mutant_cmd', type=str, default=None,
                         help='command to run after each mutant (e.g., fuzz of original)')
     parser.add_argument('--post_mutant_timeout', type=float, default=2.0,
                         help='timeout for post-mutant command')
-    parser.add_argument('--status_cmd', type=str, default="",
+    parser.add_argument('--status_cmd', type=str, default=None,
                         help='command to execute to show fuzzing stats')
     parser.add_argument('--order', type=int, default=1,
                         help='mutation order (default 1)')
@@ -50,12 +54,12 @@ def parse_args():
                         help='avoid using the same mutant multiple times, if possible')
     parser.add_argument('--repeat_retries', type=int, default=20,
                         help='number of times to retry to avoid a repeat mutant (default 20)')
-    parser.add_argument('--save_mutants', type=str, default="",
+    parser.add_argument('--save_mutants', type=str, default=None,
                         help='directory in which to save generated mutants/checks; no saving if not provided or empty')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='more verbose fuzzing, with command outputs')
     parser.add_argument('--skip_default_avoid', action='store_true',
-                        help='do not use the default list of sections to skip (e.g. printf)')
+                        help='do not use the default list of function to skip (e.g. printf)')
     parser.add_argument('--seed', type=int, default=None,
                         help='seed for random generation (default None)')
 
@@ -89,6 +93,8 @@ def main():
                                    config.fraction_mutant,
                                    list(filter(None, config.only_mutate.replace(", ", ",").split(","))),
                                    list(filter(None, config.avoid_mutating.replace(", ", ",").split(","))),
+                                   config.only_mutate_file,
+                                   config.avoid_mutating_file,
                                    config.reachability_check_cmd,
                                    config.reachability_check_timeout,
                                    config.prune_mutant_cmd,

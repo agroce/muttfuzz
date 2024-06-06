@@ -23,7 +23,7 @@ INST_SET.extend(["DeepState", "deepstate"])
 def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
     jumps = {}
 
-    proc = subprocess.Popen(["objdump", "-d", "--file-offsets", filename],
+    proc = subprocess.Popen(["objdump", "-d", "-C", "--file-offsets", filename],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
     output = str(out, encoding="utf-8")
@@ -34,15 +34,15 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
         try:
             if "File Offset" in line and line[-1] == ":":
                 avoid = False
-                section_name = line.split()[1]
+                function_name = line.split()[1]
                 for s in avoid_mutating:
-                    if s in section_name:
+                    if s in function_name:
                         avoid = True
                         break
                 if only_mutate != []:
                     found = False
                     for s in only_mutate:
-                        if s in section_name:
+                        if s in function_name:
                             found = True
                             break
                     if not found:
@@ -68,7 +68,7 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
                     loc = int(loc_bytes, 16) + section_offset
                     jumps[loc] = {"opcode": opcode,
                                   "hexdata": bytes.fromhex(fields[1]),
-                                  "section_name": section_name,
+                                  "function_name": function_name,
                                   "code": line}
         except: # If we can't parse some line in the objdump, just skip it
             pass
@@ -119,7 +119,7 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
     else:
         visited_mutants[(loc, changed)] += 1
 
-    print("MUTATING JUMP IN", jump["section_name"], "WITH ORIGINAL OPCODE", jump["opcode"])
+    print("MUTATING JUMP IN", jump["function_name"], "WITH ORIGINAL OPCODE", jump["opcode"])
     print("ORIGINAL CODE:", jump["code"])
     if changed in SHORT_NAMES:
         print("CHANGING TO", SHORT_NAMES[changed])
@@ -130,7 +130,7 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
     full_change = bytearray(jump["hexdata"]) # lets us write the correct set of NOPs for HALT insertion
     for i in range(len(changed)):
         full_change[i] = changed[i]
-    return (jump["section_name"], loc, changed)
+    return (jump["function_name"], loc, changed)
 
 def get_code(filename):
     with open(filename, "rb") as f:
@@ -154,27 +154,27 @@ def mutant_from(code, jumps, order=1, avoid_repeats=False, repeat_retries=20, vi
 def mutant(filename, order=1, avoid_mutating=[], avoid_repeats=False, repeat_retries=20, visited_mutants={}):
     return mutant_from(get_code(filename), get_jumps(filename, avoid_mutating), order=order)
 
-def write_files(mutant, reach, new_filename, reachability_filename="", save_mutants="", save_count=0):
+def write_files(mutant, reach, new_filename, reachability_filename=None, save_mutants=None, save_count=0):
     with open(new_filename, "wb") as f:
         f.write(mutant)
-    if save_mutants != "":
+    if save_mutants is not None:
         with open(save_mutants + "/mutant_" + str(save_count), "wb") as f:
             f.write(mutant)
-    if reachability_filename != "":
+    if reachability_filename is not None:
         with open(reachability_filename, "wb") as f:
             f.write(reach)
-        if save_mutants != "":
+        if save_mutants is not None:
             with open(save_mutants + "/reach_" + str(save_count), "wb") as f:
                 f.write(reach)
 
-def mutate_from(code, jumps, new_filename, order=1, reachability_filename="", save_mutants="", save_count=0,
+def mutate_from(code, jumps, new_filename, order=1, reachability_filename=None, save_mutants=None, save_count=0,
                 avoid_repeats=False, repeat_retries=20, visited_mutants={}):
     (sections, new_mutant, new_reach) = mutant_from(code, jumps, order=order, avoid_repeats=avoid_repeats,
                                             repeat_retries=repeat_retries, visited_mutants=visited_mutants)
     write_files(new_mutant, new_reach, new_filename, reachability_filename, save_mutants, save_count)
     return sections
 
-def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename="", save_mutants="",
+def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename=None, save_mutants=None,
            save_count=0, avoid_repeats=False, repeat_retries=20, visited_mutants={}):
     (sections, new_mutant, new_reach) = mutant(filename, order=order, avoid_mutating=avoid_mutating,
                                        avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,

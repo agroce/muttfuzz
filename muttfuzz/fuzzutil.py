@@ -82,21 +82,23 @@ def silent_run_with_timeout(cmd, timeout, verbose):
 def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_mutant,
                       only_mutate=[],
                       avoid_mutating=[],
-                      reachability_check_cmd="",
+                      only_mutate_file=None,
+                      avoid_mutating_file=None,
+                      reachability_check_cmd=None,
                       reachability_check_timeout=2.0,
-                      prune_mutant_cmd="",
+                      prune_mutant_cmd=None,
                       prune_mutant_timeout=2.0,
-                      initial_fuzz_cmd="",
+                      initial_fuzz_cmd=None,
                       initial_budget=60,
-                      post_initial_cmd="",
-                      post_mutant_cmd="",
+                      post_initial_cmd=None,
+                      post_mutant_cmd=None,
                       post_mutant_timeout=2.0,
-                      status_cmd="",
+                      status_cmd=None,
                       order=1,
                       score=False,
                       avoid_repeats=False,
                       repeat_retries=20,
-                      save_mutants="",
+                      save_mutants=None,
                       verbose=False,
                       skip_default_avoid=False):
     print("*" * 80)
@@ -104,11 +106,20 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
     print()
     executable_code = mutate.get_code(executable)
 
-    if initial_fuzz_cmd == "":
+    if initial_fuzz_cmd is None:
         initial_budget = 0
 
     if not skip_default_avoid:
-        avoid_mutating.extend(["LLVMFuzzerTestOneInput", "printf", "assert", "dtors", "fuzzer"])
+        avoid_mutating.extend(["LLVMFuzzerTestOneInput", "printf", "assert", "dtors", "fuzzer", "ASAN"])
+    if only_mutate_file is not None:
+        with open(only_mutate_file, 'r') as f:
+            for function in f:
+                only_mutate.append(function[:-1])
+    if avoid_mutating_file is not None:
+        with open(avoid_mutating_file, 'r') as f:
+            for function in f:
+                avoid_mutating.append(function[:-1])
+
 
     visited_mutants = {}
 
@@ -118,49 +129,49 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         mutants_run = 0.0
         mutants_killed = 0.0
         fraction_mutant = 1.0 # No final fuzz for mutation score estimation!
-        section_score = {}
+        function_score = {}
 
     print("READ EXECUTABLE WITH", len(executable_code), "BYTES")
     executable_jumps = mutate.get_jumps(executable, only_mutate, avoid_mutating)
     print("FOUND", len(executable_jumps), "MUTABLE JUMPS IN EXECUTABLE")
-    print("JUMPS BY SECTION:")
-    section_jumps = {}
+    print("JUMPS BY FUNCTION:")
+    function_jumps = {}
     for loc in executable_jumps:
         jump = executable_jumps[loc]
-        if jump["section_name"] not in section_jumps:
-            section_jumps[jump["section_name"]] = [(loc, jump)]
+        if jump["function_name"] not in function_jumps:
+            function_jumps[jump["function_name"]] = [(loc, jump)]
         else:
-            section_jumps[jump["section_name"]].append((loc, jump))
-    if reachability_check_cmd != "":
-        section_coverage = {}
-    for section in section_jumps:
-        print(section, len(section_jumps[section]))
-        if reachability_check_cmd != "":
-            section_coverage[section] = (0.0, 0.0)
+            function_jumps[jump["function_name"]].append((loc, jump))
+    if reachability_check_cmd is not None:
+        function_coverage = {}
+    for function in function_jumps:
+        print(function, len(function_jumps[function]))
+        if reachability_check_cmd is not None:
+            function_coverage[function] = (0.0, 0.0)
         if score:
-            section_score[section] = (0.0, 0.0)
+            function_score[function] = (0.0, 0.0)
     print()
     start_fuzz = time.time()
     mutant_no = 0
     try:
-        if initial_fuzz_cmd != "":
+        if initial_fuzz_cmd is not None:
             print("=" * 10,
                   datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
                   "=" * 10)
             print("RUNNING INITIAL FUZZING...")
             silent_run_with_timeout(initial_fuzz_cmd, initial_budget, verbose)
-            if status_cmd != "":
+            if status_cmd is not None:
                 print("INITIAL STATUS:")
                 subprocess.call(status_cmd, shell=True)
-            if post_initial_cmd != "":
+            if post_initial_cmd is not None:
                 subprocess.call(post_initial_cmd, shell=True)
 
-        if reachability_check_cmd != "":
+        if reachability_check_cmd is not None:
             reachability_filename = "/tmp/reachability_executable"
             reachability_checks = 0.0
             reachability_hits = 0.0
         else:
-            reachability_filename = ""
+            reachability_filename = None
         while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
             mutant_no += 1
             print()
@@ -172,13 +183,13 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             print(round(time.time() - start_fuzz, 2),
                   "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
             # make a new mutant of the executable; rename avoids hitting a busy executable
-            sections = mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable",
+            functions = mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable",
                                           order=order, reachability_filename=reachability_filename,
                                           save_mutants=save_mutants, save_count=mutant_no,
                                           avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
                                           visited_mutants=visited_mutants)
             mutant_ok = True
-            if reachability_check_cmd != "":
+            if reachability_check_cmd is not None:
                 if verbose:
                     print()
                     print("=" * 40)
@@ -193,20 +204,20 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     mutant_ok = False
                 else:
                     reachability_hits += 1.0
-                for section in sections:
-                    (hits, total) = section_coverage[section]
+                for function in functions:
+                    (hits, total) = function_coverage[function]
                     if r == 0:
-                        section_coverage[section] = (hits, total + 1)
+                        function_coverage[function] = (hits, total + 1)
                     else:
-                        section_coverage[section] = (hits + 1, total + 1)
-                    (hits, total) = section_coverage[section]
-                    print(section + ":", str(round((hits / total) * 100.0, 2)) + "% COVERAGE")
+                        function_coverage[function] = (hits + 1, total + 1)
+                    (hits, total) = function_coverage[function]
+                    print(function + ":", str(round((hits / total) * 100.0, 2)) + "% COVERAGE")
                 print ("RUNNING COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
                        str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
             if mutant_ok:
                 os.rename("/tmp/new_executable", executable)
                 subprocess.check_call(['chmod', '+x', executable])
-                if prune_mutant_cmd != "":
+                if prune_mutant_cmd is not None:
                     if verbose:
                         print()
                         print("=" * 40)
@@ -229,22 +240,22 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                         print ("** MUTANT KILLED **")
                     else:
                         print ("** MUTANT NOT KILLED **")
-                    for section in sections:
-                        (kills, total) = section_score[section]
+                    for function in functions:
+                        (kills, total) = function_score[function]
                         if r == 0:
-                            section_score[section] = (kills, total + 1)
+                            function_score[function] = (kills, total + 1)
                         else:
-                            section_score[section] = (kills + 1, total + 1)
-                        (kills, total) = section_score[section]
-                        print(section + ":", str(round((kills / total) * 100.0, 2)) + "% MUTATION SCORE")
+                            function_score[function] = (kills + 1, total + 1)
+                        (kills, total) = function_score[function]
+                        print(function + ":", str(round((kills / total) * 100.0, 2)) + "% MUTATION SCORE")
                     print ("RUNNING MUTATION SCORE ON", int(mutants_run), "MUTANTS:",
                            str(round((mutants_killed / mutants_run) * 100.0, 2)) + "%")
 
-                if post_mutant_cmd != "":
+                if post_mutant_cmd is not None:
                     restore_executable(executable, executable_code) # Might need original for post
                     print("RUNNING POST-MUTANT COMMAND")
                     silent_run_with_timeout(post_mutant_cmd, post_mutant_timeout, verbose)
-                if status_cmd != "":
+                if status_cmd is not None:
                     restore_executable(executable, executable_code) # Might need for status
                     print("STATUS:")
                     subprocess.call(status_cmd, shell=True)
@@ -254,34 +265,36 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         restore_executable(executable, executable_code)
         silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz), verbose)
         print("COMPLETED ALL FUZZING AFTER", round(time.time() - start_fuzz, 2), "SECONDS")
-        if status_cmd != "":
+        if status_cmd is not None:
             print("FINAL STATUS:")
             subprocess.call(status_cmd, shell=True)
 
-        if reachability_check_cmd != "":
+        if reachability_check_cmd is not None:
             print()
-            for section in section_coverage:
-                (hits, total) = section_coverage[section]
+            for function in function_coverage:
+                (hits, total) = function_coverage[function]
                 if total > 0:
-                    print(section + ":", str(round((hits / total) * 100.0, 2)) + "% COVERAGE")
+                    print(function + ":", str(round((hits / total) * 100.0, 2)) + "% COVERAGE (OUT OF",
+                          str(total) + ")")
                 else:
-                    print(section + ": NO COVERAGE CHECKS")
+                    print(function + ": NO COVERAGE CHECKS")
             print()
 
         if score:
             print()
-            for section in section_score:
-                (kills, total) = section_score[section]
+            for function in function_score:
+                (kills, total) = function_score[function]
                 if total > 0:
-                    print(section + ":", str(round((kills / total) * 100.0, 2)) + "% MUTATION SCORE")
+                    print(function + ":", str(round((kills / total) * 100.0, 2)) + "% MUTATION SCORE (OUT OF",
+                          str(total) + ")")
                 else:
                     if verbose:
-                        print(section + ": NO MUTANTS EXECUTED")
+                        print(function + ": NO MUTANTS EXECUTED")
             print()
 
         print()
 
-        if reachability_check_cmd != "":
+        if reachability_check_cmd is not None:
             print("FINAL COVERAGE OVER", int(reachability_checks), "MUTANTS:",
                   str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
         if score:
