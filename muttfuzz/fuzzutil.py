@@ -228,10 +228,10 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                         mutant_ok = False
             if mutant_ok:
                 print()
-                print("FUZZING MUTANT...")
+                print("FUZZING/EVALUATING MUTANT...")
                 start_run = time.time()
                 r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant, verbose)
-                print("FINISHED FUZZING IN", round(time.time() - start_run, 2), "SECONDS")
+                print("FINISHED IN", round(time.time() - start_run, 2), "SECONDS")
                 if score:
                     print()
                     mutants_run += 1
@@ -264,7 +264,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
         restore_executable(executable, executable_code)
         silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz), verbose)
-        print("COMPLETED ALL FUZZING AFTER", round(time.time() - start_fuzz, 2), "SECONDS")
+        print("COMPLETED AFTER", round(time.time() - start_fuzz, 2), "SECONDS")
         if status_cmd is not None:
             print("FINAL STATUS:")
             subprocess.call(status_cmd, shell=True)
@@ -275,7 +275,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 (hits, total) = function_coverage[function]
                 if total > 0:
                     print(function + ":", str(round((hits / total) * 100.0, 2)) + "% COVERAGE (OUT OF",
-                          str(total) + ")")
+                          str(int(total)) + ")")
                 else:
                     print(function + ": NO COVERAGE CHECKS")
             print()
@@ -286,7 +286,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 (kills, total) = function_score[function]
                 if total > 0:
                     print(function + ":", str(round((kills / total) * 100.0, 2)) + "% MUTATION SCORE (OUT OF",
-                          str(total) + ")")
+                          str(int(total)) + ")")
                 else:
                     if verbose:
                         print(function + ": NO MUTANTS EXECUTED")
