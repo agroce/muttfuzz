@@ -20,7 +20,7 @@ HALT_OP = HALT[0]
 INST_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov", "AFL_"]
 INST_SET.extend(["DeepState", "deepstate"])
 
-def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
+def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libraries=False):
     jumps = {}
     function_map = {}
 
@@ -36,6 +36,13 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
             if "File Offset" in line and line[-1] == ":":
                 avoid = False
                 function_name = line.split()[1]
+                if not mutate_standard_libraries:
+                    if function_name.find("<std::") == 0:
+                        avoid = True
+                        break
+                    if function_name.find("<boost::") == 0:
+                        avoid = True
+                        break
                 for s in avoid_mutating:
                     if s in function_name:
                         avoid = True

@@ -138,6 +138,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       save_mutants=None,
                       verbose=False,
                       skip_default_avoid=False,
+                      mutate_standard_libraries=False,
                       map_reachable=False):
     print("*" * 80)
     print("STARTING MUTTFUZZ WITH BUDGET", budget, "SECONDS")
@@ -171,7 +172,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         function_score = {}
 
     print("READ EXECUTABLE WITH", len(executable_code), "BYTES")
-    (executable_jumps, function_map) = mutate.get_jumps(executable, only_mutate, avoid_mutating)
+    (executable_jumps, function_map) = mutate.get_jumps(executable, only_mutate, avoid_mutating, mutate_standard_libraries)
     print("FOUND", len(executable_jumps), "MUTABLE JUMPS IN", len(function_map), "FUNCTIONS")
     print("JUMPS BY FUNCTION:")
     if reachability_check_cmd is not None:

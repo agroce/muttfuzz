@@ -60,6 +60,8 @@ def parse_args():
                         help='more verbose fuzzing, with command outputs')
     parser.add_argument('--skip_default_avoid', action='store_true',
                         help='do not use the default list of function to skip (e.g. printf)')
+    parser.add_argument('--mutate_standard_libraries', action='store_true',
+                        help='allow mutation of C++ standard library and boost functions')
     parser.add_argument('--seed', type=int, default=None,
                         help='seed for random generation (default None)')
     parser.add_argument('--map_reachable', action='store_true',
@@ -115,6 +117,7 @@ def main():
                                    config.save_mutants,
                                    config.verbose,
                                    config.skip_default_avoid,
+                                   config.mutate_standard_libraries,
                                    config.map_reachable)
     except IndexError:
         print("Target binary seems to have no jumps, so mutation will not do anything!")
