@@ -39,10 +39,8 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libra
                 if not mutate_standard_libraries:
                     if function_name.find("<std::") == 0:
                         avoid = True
-                        break
                     if function_name.find("<boost::") == 0:
                         avoid = True
-                        break
                 for s in avoid_mutating:
                     if s in function_name:
                         avoid = True
