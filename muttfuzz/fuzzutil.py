@@ -80,7 +80,7 @@ def silent_run_with_timeout(cmd, timeout, verbose):
 
 def map_reachability(executable, executable_code, reachability_check_cmd, reachability_check_timeout,
                      executable_jumps, function_map, verbose):
-    print("MAPPING REACHABILITY")
+    print("MAPPING REACHABILITY (WARNING: WILL IGNORE BUDGET!)")
     print()
     reachability_filename = "/tmp/reachability_executable"
     try:
@@ -89,10 +89,14 @@ def map_reachability(executable, executable_code, reachability_check_cmd, reacha
                 for function in function_map:
                     print("*" * 80)
                     print("CHECKING FUNCTION", function, "WITH", len(function_map[function]), "JUMPS")
+                    print("IGNORE JUMP CHANGES SHOWN, ONLY CHECKING HALT REACHABILITY")
                     reached = False
+                    loc_count = 0
                     for loc in function_map[function]:
+                        loc_count += 1
                         # we're going to "randomly" pick this one jump
                         only_this_jump = {loc: executable_jumps[loc]}
+                        print("CHECKING JUMP #" + str(loc_count), "OUT OF", len(function_map[function]))
                         mutate.mutate_from(executable_code, only_this_jump, "/tmp/new_executable",
                                            reachability_filename=reachability_filename)
                         os.rename(reachability_filename, executable)
@@ -150,7 +154,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
 
     if not skip_default_avoid:
         avoid_mutating.extend(["LLVMFuzzerTestOneInput", "printf", "assert", "dtors", "fuzzer", "asan", "Asan", "ubsan", "sanitizer",
-                               "__interceptor", "register_tm_clones", "fuzz", "Fuzz"])
+                               "__interceptor", "register_tm_clones", "fuzz", "Fuzz", "_init", "__cxx_global", "memset", "memcpy"])
     if only_mutate_file is not None:
         with open(only_mutate_file, 'r') as f:
             for function in f:
@@ -159,7 +163,6 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         with open(avoid_mutating_file, 'r') as f:
             for function in f:
                 avoid_mutating.append(function[:-1])
-
 
     visited_mutants = {}
 
