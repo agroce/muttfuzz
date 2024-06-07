@@ -156,7 +156,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         avoid_mutating.extend(["Fuzz", "fuzz",
                                "asan", "Asan", "ubsan", "Ubsan", "sanitizer",
                                "interceptor", "Interceptor",
-                               "StrstrCheck", "PosixSpwanImpl", "unpoison",
+                               "StrstrCheck", "PosixSpawnImpl", "unpoison",
                                "assert", "Assert",
                                "printf", "scanf", "memcpy", "memset", "memcmp",
                                "strncpy", "strcpy", "strnstr", "strstr", "strncmp", "strcmp",
