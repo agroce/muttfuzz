@@ -162,6 +162,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                                "write_pollfd", "write_mntent", "real_pthread_attr_getstack", "initialize_obstack",
                                "MlockIsUnsupported", "WrappedCookie", "RealStrLen", "WrappedFunopen", "PoisonAlignedStackMemory",
                                "PoisonMemory", "PoisonShadow", "FindBadAddress", "FixUnalignedStorage", "ShadowSegment",
+                               "isDerivedFromAtOffset", "findBaseAtOffset",
                                "assert", "Assert",
                                "printf", "scanf", "memcpy", "memset", "memcmp",
                                "strncpy", "strcpy", "strnstr", "strstr", "strncmp", "strcmp",
