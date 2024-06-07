@@ -22,6 +22,7 @@ INST_SET.extend(["DeepState", "deepstate"])
 
 def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
     jumps = {}
+    function_map = {}
 
     proc = subprocess.Popen(["objdump", "-d", "-C", "--file-offsets", filename],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -47,9 +48,9 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
                             break
                     if not found:
                         avoid = True
-                section_base = int(line.split()[0], 16)
+                base = int(line.split()[0], 16)
                 offset_hex = line.split("File Offset:")[1].split(")")[0]
-                section_offset = int(offset_hex, 16) - section_base
+                offset = int(offset_hex, 16) - base
                 continue
             if avoid:
                 continue
@@ -65,15 +66,19 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[]):
                 opcode = fields[2].split()[0]
                 if opcode in JUMP_OPCODES:
                     loc_bytes = fields[0].split(":")[0]
-                    loc = int(loc_bytes, 16) + section_offset
+                    loc = int(loc_bytes, 16) + offset
                     jumps[loc] = {"opcode": opcode,
                                   "hexdata": bytes.fromhex(fields[1]),
                                   "function_name": function_name,
                                   "code": line}
+                    if function_name not in function_map:
+                        function_map[function_name] = [loc]
+                    else:
+                        function_map[function_name].append(loc)
         except: # If we can't parse some line in the objdump, just skip it
             pass
 
-    return jumps
+    return (jumps, function_map)
 
 def different_jump(hexdata):
     P_FLIP = 0.70
@@ -137,22 +142,22 @@ def get_code(filename):
         return bytearray(f.read())
 
 def mutant_from(code, jumps, order=1, avoid_repeats=False, repeat_retries=20, visited_mutants={}):
-    sections = []
+    functions = []
     new_code = bytearray(code)
     reach_code = bytearray(code)
     for i in range(order): # allows higher-order mutants, though can undo mutations
-        (section, loc, new_data) = pick_and_change(jumps, avoid_repeats, repeat_retries, visited_mutants)
-        sections.append(section)
+        (function, loc, new_data) = pick_and_change(jumps, avoid_repeats, repeat_retries, visited_mutants)
+        functions.append(function)
         for offset in range(0, len(new_data)):
             if offset == 0:
                 reach_code[loc + offset] = HALT_OP
             else:
                 reach_code[loc + offset] = NOP_OP
             new_code[loc + offset] = new_data[offset]
-    return (sections, new_code, reach_code)
+    return (functions, new_code, reach_code)
 
 def mutant(filename, order=1, avoid_mutating=[], avoid_repeats=False, repeat_retries=20, visited_mutants={}):
-    return mutant_from(get_code(filename), get_jumps(filename, avoid_mutating), order=order)
+    return mutant_from(get_code(filename), get_jumps(filename, avoid_mutating)[0], order=order)
 
 def write_files(mutant, reach, new_filename, reachability_filename=None, save_mutants=None, save_count=0):
     with open(new_filename, "wb") as f:
@@ -169,15 +174,15 @@ def write_files(mutant, reach, new_filename, reachability_filename=None, save_mu
 
 def mutate_from(code, jumps, new_filename, order=1, reachability_filename=None, save_mutants=None, save_count=0,
                 avoid_repeats=False, repeat_retries=20, visited_mutants={}):
-    (sections, new_mutant, new_reach) = mutant_from(code, jumps, order=order, avoid_repeats=avoid_repeats,
+    (functions, new_mutant, new_reach) = mutant_from(code, jumps, order=order, avoid_repeats=avoid_repeats,
                                             repeat_retries=repeat_retries, visited_mutants=visited_mutants)
     write_files(new_mutant, new_reach, new_filename, reachability_filename, save_mutants, save_count)
-    return sections
+    return functions
 
 def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename=None, save_mutants=None,
            save_count=0, avoid_repeats=False, repeat_retries=20, visited_mutants={}):
-    (sections, new_mutant, new_reach) = mutant(filename, order=order, avoid_mutating=avoid_mutating,
+    (functions, new_mutant, new_reach) = mutant(filename, order=order, avoid_mutating=avoid_mutating,
                                        avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
                                        visited_mutants=visited_mutants)
     write_files(new_mutant, new_reach, new_filename, reachability_filename, save_mutants, save_count)
-    return sections
+    return functions

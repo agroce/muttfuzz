@@ -78,6 +78,43 @@ def silent_run_with_timeout(cmd, timeout, verbose):
 
     return P.returncode
 
+def map_reachability(executable, executable_code, reachability_check_cmd, reachability_check_timeout,
+                     executable_jumps, function_map, verbose):
+    print("MAPPING REACHABILITY")
+    print()
+    reachability_filename = "/tmp/reachability_executable"
+    try:
+        with open("reachable_functions.txt", 'w') as reachable_f:
+            with open("unreachable_functions.txt", 'w') as unreachable_f:
+                for function in function_map:
+                    print("*" * 80)
+                    print("CHECKING FUNCTION", function, "WITH", len(function_map[function]), "JUMPS")
+                    reached = False
+                    for loc in function_map[function]:
+                        # we're going to "randomly" pick this one jump
+                        only_this_jump = {loc: executable_jumps[loc]}
+                        mutate.mutate_from(executable_code, only_this_jump, "/tmp/new_executable",
+                                           reachability_filename=reachability_filename)
+                        os.rename(reachability_filename, executable)
+                        subprocess.check_call(['chmod', '+x', executable])
+                        r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout, verbose)
+                        restore_executable(executable, executable_code)
+                        if r != 0:
+                            print("FUNCTION", function, "IS REACHABLE")
+                            reached = True
+                            break
+                        else:
+                            print("NOT YET REACHED...")
+                    if not reached:
+                        print("FUNCTION", function, "IS NOT REACHABLE")
+                        unreachable_f.write(function + "\n")
+                    else:
+                        reachable_f.write(function + "\n")
+                    print()
+    finally:
+        # always restore the original binary!
+        restore_executable(executable, executable_code)
+
 # all _cmd arguments can also be Python functions
 def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_mutant,
                       only_mutate=[],
@@ -100,7 +137,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       repeat_retries=20,
                       save_mutants=None,
                       verbose=False,
-                      skip_default_avoid=False):
+                      skip_default_avoid=False,
+                      map_reachable=False):
     print("*" * 80)
     print("STARTING MUTTFUZZ WITH BUDGET", budget, "SECONDS")
     print()
@@ -133,25 +171,24 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         function_score = {}
 
     print("READ EXECUTABLE WITH", len(executable_code), "BYTES")
-    executable_jumps = mutate.get_jumps(executable, only_mutate, avoid_mutating)
-    print("FOUND", len(executable_jumps), "MUTABLE JUMPS IN EXECUTABLE")
+    (executable_jumps, function_map) = mutate.get_jumps(executable, only_mutate, avoid_mutating)
+    print("FOUND", len(executable_jumps), "MUTABLE JUMPS IN", len(function_map), "FUNCTIONS")
     print("JUMPS BY FUNCTION:")
-    function_jumps = {}
-    for loc in executable_jumps:
-        jump = executable_jumps[loc]
-        if jump["function_name"] not in function_jumps:
-            function_jumps[jump["function_name"]] = [(loc, jump)]
-        else:
-            function_jumps[jump["function_name"]].append((loc, jump))
     if reachability_check_cmd is not None:
         function_coverage = {}
-    for function in function_jumps:
-        print(function, len(function_jumps[function]))
+    for function in function_map:
+        print(function, len(function_map[function]))
         if reachability_check_cmd is not None:
             function_coverage[function] = (0.0, 0.0)
         if score:
             function_score[function] = (0.0, 0.0)
     print()
+
+    if map_reachable:
+        map_reachability(executable, executable_code, reachability_check_cmd, reachability_check_timeout,
+                         executable_jumps, function_map, verbose)
+        return
+
     start_fuzz = time.time()
     mutant_no = 0
     try:

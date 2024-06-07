@@ -62,6 +62,9 @@ def parse_args():
                         help='do not use the default list of function to skip (e.g. printf)')
     parser.add_argument('--seed', type=int, default=None,
                         help='seed for random generation (default None)')
+    parser.add_argument('--map_reachable', action='store_true',
+                        help='do not perform fuzzing, just scan each function to determine if it has any reachable jumps;'
+                             + 'produces files reachable_functions.txt and unreachable_functions.txt')
 
     parsed_args = parser.parse_args(sys.argv[1:])
     return (parsed_args, parser)
@@ -111,7 +114,8 @@ def main():
                                    config.repeat_retries,
                                    config.save_mutants,
                                    config.verbose,
-                                   config.skip_default_avoid)
+                                   config.skip_default_avoid,
+                                   config.map_reachable)
     except IndexError:
         print("Target binary seems to have no jumps, so mutation will not do anything!")
 
