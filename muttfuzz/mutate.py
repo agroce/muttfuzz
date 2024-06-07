@@ -35,7 +35,7 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libra
         try:
             if "File Offset" in line and line[-1] == ":":
                 avoid = False
-                function_name = line.split(" ", 1)[1].split("(File Offset", 1)[0]
+                function_name = line.split(" ", 1)[1].split(" (File Offset", 1)[0]
                 if not mutate_standard_libraries:
                     if function_name.find("<std::") == 0:
                         avoid = True
