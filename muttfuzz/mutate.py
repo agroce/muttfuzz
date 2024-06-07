@@ -36,8 +36,7 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libra
             if "File Offset" in line and line[-1] == ":":
                 avoid = False
                 function_name = line.split(" ", 1)[1].split(" (File Offset", 1)[0]
-                just_name = function_name.replace("(anonymous namespace)", "")
-                just_name = just_name.split("(")[0]
+                just_name = function_name[:function_name.rfind("(")]
                 just_name = just_name[1:]
                 if not mutate_standard_libraries:
                     if "std::" in just_name:

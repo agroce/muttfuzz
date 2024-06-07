@@ -153,8 +153,13 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         initial_budget = 0
 
     if not skip_default_avoid:
-        avoid_mutating.extend(["LLVMFuzzerTestOneInput", "printf", "assert", "dtors", "fuzzer", "asan", "Asan", "ubsan", "sanitizer",
-                               "__interceptor", "register_tm_clones", "fuzz", "Fuzz", "_init", "__cxx_global", "memset", "memcpy"])
+        avoid_mutating.extend(["Fuzz", "fuzz",
+                               "asan", "Asan", "ubsan", "Ubsan", "interceptor", "Interceptor", "PosixSpawnImpl", "sanitizer",
+                               "assert", "Assert",
+                               "printf", "scanf", "memcpy", "memset", "memcmp",
+                               "strncpy", "strcpy", "strnstr", "strstr", "strncmp", "strcmp",
+                               "operator new", "operator delete", "register_tm_clones", "_init", "_cxx_global",
+                               "_gnu_cxx", "dtors"])
     if only_mutate_file is not None:
         with open(only_mutate_file, 'r') as f:
             for function in f:
