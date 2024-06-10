@@ -347,9 +347,16 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         print()
 
         if reachability_check_cmd is not None:
+            unreach_funcs = 0
+            unreach_branches = 0
             for u in unreach_cache:
                 if u in function_map:
                     print("** FUNCTION", u, "WITH", len(function_map[u]), "BRANCHES UNREACHABLE **")
+                    unreach_funcs += 1
+                    unreach_branches += len(function_map(u))
+            print()
+            print("TOTAL OF", unreach_funcs, "WITH", unreach_branches, "BRANCHES ARE UNREACHABLE")
+            print()
 
         if reachability_check_cmd is not None:
             print("FINAL COVERAGE OVER", int(reachability_checks), "MUTANTS:",
