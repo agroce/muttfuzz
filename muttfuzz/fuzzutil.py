@@ -178,6 +178,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 avoid_mutating.append(function[:-1])
 
     visited_mutants = {}
+    unreach_cache = {}
+    reach_cache = {} # Can only use effectively for order 1 mutants
 
     if score:
         if not avoid_repeats:
@@ -188,7 +190,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         function_score = {}
 
     print("READ EXECUTABLE WITH", len(executable_code), "BYTES")
-    (executable_jumps, function_map) = mutate.get_jumps(executable, only_mutate, avoid_mutating, mutate_standard_libraries)
+    (executable_jumps, function_map, function_reach) = mutate.get_jumps(executable, only_mutate,
+                                                                        avoid_mutating, mutate_standard_libraries)
     print("FOUND", len(executable_jumps), "MUTABLE JUMPS IN", len(function_map), "FUNCTIONS")
     print("JUMPS BY FUNCTION:")
     if reachability_check_cmd is not None:
@@ -222,6 +225,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 subprocess.call(post_initial_cmd, shell=True)
 
         if reachability_check_cmd is not None:
+            func_reachability_filename = "/tmp/func_reachability_executable"
             reachability_filename = "/tmp/reachability_executable"
             reachability_checks = 0.0
             reachability_hits = 0.0
@@ -238,11 +242,12 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             print(round(time.time() - start_fuzz, 2),
                   "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
             # make a new mutant of the executable; rename avoids hitting a busy executable
-            functions = mutate.mutate_from(executable_code, executable_jumps, "/tmp/new_executable",
-                                          order=order, reachability_filename=reachability_filename,
-                                          save_mutants=save_mutants, save_count=mutant_no,
-                                          avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
-                                          visited_mutants=visited_mutants)
+            (functions, locs) = mutate.mutate_from(executable_code, executable_jumps, function_reach, "/tmp/new_executable",
+                                                   order=order, reachability_filename=reachability_filename,
+                                                   func_reachability_filename=func_reachability_filename,
+                                                   save_mutants=save_mutants, save_count=mutant_no,
+                                                   avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
+                                                   visited_mutants=visited_mutants, unreach_cache=unreach_cache)
             mutant_ok = True
             if reachability_check_cmd is not None:
                 if verbose:
@@ -250,15 +255,38 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     print("=" * 40)
                     print("CHECKING REACHABILITY")
                 reachability_checks += 1.0
-                os.rename(reachability_filename, executable)
-                subprocess.check_call(['chmod', '+x', executable])
-                r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout, verbose)
-                restore_executable(executable, executable_code)
-                if r == 0:
-                    print("MUTANT IS NOT REACHABLE (RETURN CODE 0)")
-                    mutant_ok = False
+                # First check the funciton itself is reachable                
+                if tuple(functions) in reach_cache:
+                    print("SKIPPING FUNCTION REACHABILITY, IN CACHE")
+                    r = 1
                 else:
-                    reachability_hits += 1.0
+                    os.rename(func_reachability_filename, executable)
+                    subprocess.check_call(['chmod', '+x', executable])
+                    r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout, verbose)
+                    restore_executable(executable, executable_code)
+                if r == 0:
+                    print("FUNCTION ITSELF IS NOT REACHABLE (RETURN CODE 0)")
+                    mutant_ok = False
+                    for function in functions:
+                        unreach_cache[function] = True
+                else:
+                    reach_cache[tuple(functions)] = True
+                    if tuple(locs) in reach_cache:
+                        print("SKIPPING JUMP REACHABILITY,  IN CACHE")
+                        r = 1
+                    else:
+                        os.rename(reachability_filename, executable)
+                        subprocess.check_call(['chmod', '+x', executable])
+                        r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout, verbose)
+                        restore_executable(executable, executable_code)
+                    if r == 0:
+                        print("MUTANT IS NOT REACHABLE (RETURN CODE 0)")
+                        for loc in locs:
+                            unreach_cache[loc] = True
+                        mutant_ok = False
+                    else:
+                        reach_cache[tuple(locs)] = True
+                        reachability_hits += 1.0
                 for function in functions:
                     (hits, total) = function_coverage[function]
                     if r == 0:

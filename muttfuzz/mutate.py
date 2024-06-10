@@ -17,12 +17,27 @@ HALT = bytes.fromhex("F4") # Needed for reachability check
 HALT_OP = HALT[0]
 
 # known markers for fuzzer/compiler injected instrumentation/etc.
-INST_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov", "AFL_"]
-INST_SET.extend(["DeepState", "deepstate"])
+INSTRUMENTATION_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov", "AFL_"]
+INSTRUMENTATION_SET.extend(["DeepState", "deepstate"])
+
+def sans_arguments(s):
+    pos = len(s) - 1
+    lcount = 0
+    while pos > 0:
+        if s[pos] == ")":
+            lcount += 1
+        if s[pos] == "(":
+            if lcount > 1:
+                lcount -= 1
+            else:
+                return s[:pos]
+        pos -= 1
+    return s
 
 def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libraries=False):
     jumps = {}
     function_map = {}
+    function_reach = {}
 
     proc = subprocess.Popen(["objdump", "-d", "-C", "--file-offsets", filename],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -30,13 +45,14 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libra
     output = str(out, encoding="utf-8")
 
     avoid = False
+    first_inst = False
 
     for line in output.split("\n"):
         try:
             if "File Offset" in line and line[-1] == ":":
                 avoid = False
                 function_name = line.split(" ", 1)[1].split(" (File Offset", 1)[0]
-                just_name = function_name[:function_name.rfind("(")]
+                just_name = sans_arguments(function_name)
                 just_name = just_name[1:]
                 if not mutate_standard_libraries:
                     if "std::" in just_name:
@@ -58,18 +74,28 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libra
                 base = int(line.split()[0], 16)
                 offset_hex = line.split("File Offset:")[1].split(")")[0]
                 offset = int(offset_hex, 16) - base
+                first_inst = True
                 continue
             if avoid:
                 continue
-            found_inst = False
-            for i in INST_SET:
-                if i in line:
-                    found_inst = True
-                    break
-            if found_inst:
-                continue # Don't mutate these things
+
             fields = line.split("\t")
             if len(fields) > 1:
+                loc_bytes = fields[0].split(":")[0]
+                loc = int(loc_bytes, 16) + offset
+
+                if first_inst: # Record location of first instruction for function reachability purposes
+                    function_reach[function_name] = loc
+                    first_inst = False
+                
+                found_instrumentation = False
+                for i in INSTRUMENTATION_SET:
+                    if i in line:
+                        found_instrumentation = True
+                        break
+                if found_instrumentation:
+                    continue # Don't mutate these things
+
                 opcode = fields[2].split()[0]
                 if opcode in JUMP_OPCODES:
                     loc_bytes = fields[0].split(":")[0]
@@ -85,7 +111,7 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libra
         except: # If we can't parse some line in the objdump, just skip it
             pass
 
-    return (jumps, function_map)
+    return (jumps, function_map, function_reach)
 
 def different_jump(hexdata):
     P_FLIP = 0.70
@@ -109,13 +135,27 @@ def different_jump(hexdata):
             return SHORT_JUMPS[-1]
         return random.choice(list(filter(lambda j: j[0] != hexdata[0], SHORT_JUMPS[:-1])))
 
-def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutants={}):
+def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutants={}, unreach_cache={}):
     done = False
     tries = 0
     while not done:
         tries += 1
-        loc = random.choice(list(jumps.keys()))
-        jump = jumps[loc]
+        # First, pick a reachable jump
+        reachable = False
+        rtries = 0
+        while not reachable:
+            reachable = True
+            rtries += 1
+            if rtries > (len(jumps) * 10):
+                print("SOMETHING IS WRONG, NEEDED MORE THAN", rtries, "ATTEMPTS TO FIND REACHABLE JUMP")
+                raise Exception("Unable to find reachable jump!")
+            loc = random.choice(list(jumps.keys()))
+            jump = jumps[loc]
+            # Could know function is unreachable or specific jump is unreachable
+            if jump["function_name"] in unreach_cache:
+                reachable = False
+            if loc in unreach_cache:
+                reachable = False
         changed = different_jump(jump["hexdata"])
         if (not avoid_repeats) or ((loc, changed) not in visited_mutants):
             done = True
@@ -148,25 +188,33 @@ def get_code(filename):
     with open(filename, "rb") as f:
         return bytearray(f.read())
 
-def mutant_from(code, jumps, order=1, avoid_repeats=False, repeat_retries=20, visited_mutants={}):
+def mutant_from(code, jumps, function_reach, order=1, avoid_repeats=False, repeat_retries=20, visited_mutants={},
+                unreach_cache={}):
     functions = []
+    locs = []
     new_code = bytearray(code)
     reach_code = bytearray(code)
+    func_reach_code = bytearray(code)
     for i in range(order): # allows higher-order mutants, though can undo mutations
-        (function, loc, new_data) = pick_and_change(jumps, avoid_repeats, repeat_retries, visited_mutants)
+        (function, loc, new_data) = pick_and_change(jumps, avoid_repeats, repeat_retries, visited_mutants, unreach_cache)
         functions.append(function)
+        locs.append(loc)
+        func_reach_code[function_reach[function]] = HALT_OP
         for offset in range(0, len(new_data)):
             if offset == 0:
                 reach_code[loc + offset] = HALT_OP
             else:
                 reach_code[loc + offset] = NOP_OP
             new_code[loc + offset] = new_data[offset]
-    return (functions, new_code, reach_code)
+    return (functions, locs, new_code, reach_code, func_reach_code)
 
-def mutant(filename, order=1, avoid_mutating=[], avoid_repeats=False, repeat_retries=20, visited_mutants={}):
-    return mutant_from(get_code(filename), get_jumps(filename, avoid_mutating)[0], order=order)
+def mutant(filename, order=1, avoid_mutating=[], avoid_repeats=False, repeat_retries=20, visited_mutants={},
+           unreach_cache={}):
+    (jumps, function_map, function_reach) = get_jumps(filename, avoid_mutating)
+    return mutant_from(get_code(filename),jumps, function_reach, order=order)
 
-def write_files(mutant, reach, new_filename, reachability_filename=None, save_mutants=None, save_count=0):
+def write_files(mutant, reach, func_reach, new_filename, reachability_filename=None, func_reachability_filename=None,
+                save_mutants=None, save_count=0):
     with open(new_filename, "wb") as f:
         f.write(mutant)
     if save_mutants is not None:
@@ -178,18 +226,32 @@ def write_files(mutant, reach, new_filename, reachability_filename=None, save_mu
         if save_mutants is not None:
             with open(save_mutants + "/reach_" + str(save_count), "wb") as f:
                 f.write(reach)
+    if func_reachability_filename is not None:
+        with open(func_reachability_filename, "wb") as f:
+            f.write(func_reach)
+        if save_mutants is not None:
+            with open(save_mutants + "/func_reach_" + str(save_count), "wb") as f:
+                f.write(func_reach)
 
-def mutate_from(code, jumps, new_filename, order=1, reachability_filename=None, save_mutants=None, save_count=0,
-                avoid_repeats=False, repeat_retries=20, visited_mutants={}):
-    (functions, new_mutant, new_reach) = mutant_from(code, jumps, order=order, avoid_repeats=avoid_repeats,
-                                            repeat_retries=repeat_retries, visited_mutants=visited_mutants)
-    write_files(new_mutant, new_reach, new_filename, reachability_filename, save_mutants, save_count)
-    return functions
+def mutate_from(code, jumps, function_reach, new_filename, order=1, reachability_filename=None,
+                func_reachability_filename=None, save_mutants=None, save_count=0, avoid_repeats=False, repeat_retries=20,
+                visited_mutants={}, unreach_cache={}):
+    (functions, locs, new_mutant, new_reach, new_func_reach) = mutant_from(code, jumps, function_reach, order=order,
+                                                                           avoid_repeats=avoid_repeats,
+                                                                           repeat_retries=repeat_retries,
+                                                                           visited_mutants=visited_mutants,
+                                                                           unreach_cache=unreach_cache)
+    write_files(new_mutant, new_reach, new_func_reach, new_filename, reachability_filename, func_reachability_filename,
+                save_mutants, save_count)
+    return (functions, locs)
 
-def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename=None, save_mutants=None,
-           save_count=0, avoid_repeats=False, repeat_retries=20, visited_mutants={}):
-    (functions, new_mutant, new_reach) = mutant(filename, order=order, avoid_mutating=avoid_mutating,
-                                       avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
-                                       visited_mutants=visited_mutants)
-    write_files(new_mutant, new_reach, new_filename, reachability_filename, save_mutants, save_count)
-    return functions
+def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename=None, func_reachability_filename=None,
+           save_mutants=None, save_count=0, avoid_repeats=False, repeat_retries=20, visited_mutants={}, unreach_cache={}):
+    (functions, locs, new_mutant, new_reach, new_func_reach) = mutant(filename, order=order, avoid_mutating=avoid_mutating,
+                                                                      avoid_repeats=avoid_repeats,
+                                                                      repeat_retries=repeat_retries,
+                                                                      visited_mutants=visited_mutants,
+                                                                      unreach_cache=unreach_cache)
+    write_files(new_mutant, new_reach, new_func_reach, new_filename, reachability_filename, func_reachability_filename,
+                save_mutants, save_count)
+    return (functions, locs)
