@@ -78,47 +78,6 @@ def silent_run_with_timeout(cmd, timeout, verbose):
 
     return P.returncode
 
-def map_reachability(executable, executable_code, reachability_check_cmd, reachability_check_timeout,
-                     executable_jumps, function_map, verbose):
-    print("MAPPING REACHABILITY (WARNING: WILL IGNORE BUDGET!)")
-    print()
-    reachability_filename = "/tmp/reachability_executable"
-    try:
-        with open("reachable_functions.txt", 'w') as reachable_f:
-            with open("unreachable_functions.txt", 'w') as unreachable_f:
-                for function in function_map:
-                    print("*" * 80)
-                    print("CHECKING FUNCTION", function, "WITH", len(function_map[function]), "JUMPS")
-                    print("IGNORE JUMP CHANGES SHOWN, ONLY CHECKING HALT REACHABILITY")
-                    reached = False
-                    loc_count = 0
-                    for loc in function_map[function]:
-                        loc_count += 1
-                        # we're going to "randomly" pick this one jump
-                        only_this_jump = {loc: executable_jumps[loc]}
-                        print("CHECKING JUMP #" + str(loc_count), "OUT OF", len(function_map[function]))
-                        mutate.mutate_from(executable_code, only_this_jump, "/tmp/new_executable",
-                                           reachability_filename=reachability_filename)
-                        os.rename(reachability_filename, executable)
-                        subprocess.check_call(['chmod', '+x', executable])
-                        r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout, verbose)
-                        restore_executable(executable, executable_code)
-                        if r != 0:
-                            print("FUNCTION", function, "IS REACHABLE")
-                            reached = True
-                            break
-                        else:
-                            print("NOT YET REACHED...")
-                    if not reached:
-                        print("FUNCTION", function, "IS NOT REACHABLE")
-                        unreachable_f.write(function + "\n")
-                    else:
-                        reachable_f.write(function + "\n")
-                    print()
-    finally:
-        # always restore the original binary!
-        restore_executable(executable, executable_code)
-
 # all _cmd arguments can also be Python functions
 def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_mutant,
                       only_mutate=[],
@@ -127,6 +86,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       avoid_mutating_file=None,
                       reachability_check_cmd=None,
                       reachability_check_timeout=2.0,
+                      unreach_cache_file=None,
                       prune_mutant_cmd=None,
                       prune_mutant_timeout=2.0,
                       initial_fuzz_cmd=None,
@@ -142,8 +102,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       save_mutants=None,
                       verbose=False,
                       skip_default_avoid=False,
-                      mutate_standard_libraries=False,
-                      map_reachable=False):
+                      mutate_standard_libraries=False):
     print("*" * 80)
     print("STARTING MUTTFUZZ WITH BUDGET", budget, "SECONDS")
     print()
@@ -204,10 +163,13 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             function_score[function] = (0.0, 0.0)
     print()
 
-    if map_reachable:
-        map_reachability(executable, executable_code, reachability_check_cmd, reachability_check_timeout,
-                         executable_jumps, function_map, verbose)
-        return
+    if unreach_cache_file is not None:
+        if os.path.exists(unreach_cache_file):
+            print("READING UNREACHABLE FUNCTION CACHE")
+            with open(unreach_cache_file, 'r') as f:
+                for line in f:
+                    unreach_cache[line.split("\n")[0]] = True
+            print("READ", len(unreach_cache), "UNREACHABLE FUNCTIONS")
 
     start_fuzz = time.time()
     mutant_no = 0
@@ -269,6 +231,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     mutant_ok = False
                     for function in functions:
                         unreach_cache[function] = True
+                        if unreach_cache_file is not None:
+                            with open(unreach_cache_file, 'a') as f:
+                                f.write(function + "\n")
                 else:
                     reach_cache[tuple(functions)] = True
                     if tuple(locs) in reach_cache:
@@ -387,6 +352,10 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             else:
                 print("NO MUTANTS EXECUTED!")
 
+        if reachability_check_cmd is not None:
+            for u in unreach_cache:
+                if u in function_map:
+                    print("** FUNCTION", u, "WAS UNREACHABLE **")
         visits = visited_mutants.values()
         print("MAXIMUM VISITS TO A MUTANT:", max(visits))
         print("MEAN VISITS TO A MUTANT:", round(sum(visits) / (len(visits) * 1.0), 2))

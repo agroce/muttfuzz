@@ -30,6 +30,8 @@ def parse_args():
                         help='command to check reachability; should return non-zero if some inputs crash')
     parser.add_argument('--reachability_check_timeout', type=float, default=2.0,
                         help='timeout for mutant check')
+    parser.add_argument('--unreach_cache_file', metavar='filename', type=str, default=None,
+                        help='file for unreachability cache, created if does not exist, otherwise read')
     parser.add_argument('--prune_mutant_cmd', type=str, default=None,
                         help='command to check mutants for validity/interest')
     parser.add_argument('--prune_mutant_timeout', type=float, default=2.0,
@@ -64,9 +66,6 @@ def parse_args():
                         help='allow mutation of C++ standard library and boost functions')
     parser.add_argument('--seed', type=int, default=None,
                         help='seed for random generation (default None)')
-    parser.add_argument('--map_reachable', action='store_true',
-                        help='do not perform fuzzing, just scan each function to determine if it has any reachable jumps;'
-                             + 'produces files reachable_functions.txt and unreachable_functions.txt')
 
     parsed_args = parser.parse_args(sys.argv[1:])
     return (parsed_args, parser)
@@ -102,6 +101,7 @@ def main():
                                    config.avoid_mutating_file,
                                    config.reachability_check_cmd,
                                    config.reachability_check_timeout,
+                                   config.unreach_cache_file,
                                    config.prune_mutant_cmd,
                                    config.prune_mutant_timeout,
                                    config.initial_fuzz_cmd,
@@ -117,8 +117,7 @@ def main():
                                    config.save_mutants,
                                    config.verbose,
                                    config.skip_default_avoid,
-                                   config.mutate_standard_libraries,
-                                   config.map_reachable)
+                                   config.mutate_standard_libraries)
     except IndexError:
         print("Target binary seems to have no jumps, so mutation will not do anything!")
 
