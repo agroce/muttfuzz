@@ -87,6 +87,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       reachability_check_cmd=None,
                       reachability_check_timeout=2.0,
                       unreach_cache_file=None,
+                      no_unreach_cache=False,
                       prune_mutant_cmd=None,
                       prune_mutant_timeout=2.0,
                       initial_fuzz_cmd=None,
@@ -230,10 +231,11 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     print("FUNCTION ITSELF IS NOT REACHABLE (RETURN CODE 0)")
                     mutant_ok = False
                     for function in functions:
-                        unreach_cache[function] = True
-                        if unreach_cache_file is not None:
-                            with open(unreach_cache_file, 'a') as f:
-                                f.write(function + "\n")
+                        if not no_unreach_cache:
+                            unreach_cache[function] = True
+                            if unreach_cache_file is not None:
+                                with open(unreach_cache_file, 'a') as f:
+                                    f.write(function + "\n")
                 else:
                     reach_cache[tuple(functions)] = True
                     if tuple(locs) in reach_cache:
@@ -247,7 +249,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     if r == 0:
                         print("MUTANT IS NOT REACHABLE (RETURN CODE 0)")
                         for loc in locs:
-                            unreach_cache[loc] = True
+                            if not no_unreach_cache:
+                                unreach_cache[loc] = True
+                                # No file caching for location reachability
                         mutant_ok = False
                     else:
                         reach_cache[tuple(locs)] = True
@@ -343,6 +347,11 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         print()
 
         if reachability_check_cmd is not None:
+            for u in unreach_cache:
+                if u in function_map:
+                    print("** FUNCTION", u, "WITH", len(function_map[u]), "BRANCHES UNREACHABLE **")
+
+        if reachability_check_cmd is not None:
             print("FINAL COVERAGE OVER", int(reachability_checks), "MUTANTS:",
                   str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
         if score:
@@ -352,10 +361,6 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             else:
                 print("NO MUTANTS EXECUTED!")
 
-        if reachability_check_cmd is not None:
-            for u in unreach_cache:
-                if u in function_map:
-                    print("** FUNCTION", u, "WAS UNREACHABLE **")
         visits = visited_mutants.values()
         print("MAXIMUM VISITS TO A MUTANT:", max(visits))
         print("MEAN VISITS TO A MUTANT:", round(sum(visits) / (len(visits) * 1.0), 2))

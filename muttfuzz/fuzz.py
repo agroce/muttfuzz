@@ -32,6 +32,8 @@ def parse_args():
                         help='timeout for mutant check')
     parser.add_argument('--unreach_cache_file', metavar='filename', type=str, default=None,
                         help='file for unreachability cache, created if does not exist, otherwise read')
+    parser.add_argument('--no_unreach_cache', action='store_true',
+                        help='do not make use of the unreachability cache (sometimes useful for fuzzing)')
     parser.add_argument('--prune_mutant_cmd', type=str, default=None,
                         help='command to check mutants for validity/interest')
     parser.add_argument('--prune_mutant_timeout', type=float, default=2.0,
@@ -51,7 +53,7 @@ def parse_args():
     parser.add_argument('--order', type=int, default=1,
                         help='mutation order (default 1)')
     parser.add_argument('-s', '--score', action='store_true',
-                        help='compute a mutation score, instead of fuzzing.')
+                        help='compute a mutation score, instead of fuzzing')
     parser.add_argument('--avoid_repeats', action='store_true',
                         help='avoid using the same mutant multiple times, if possible')
     parser.add_argument('--repeat_retries', type=int, default=20,
@@ -102,6 +104,7 @@ def main():
                                    config.reachability_check_cmd,
                                    config.reachability_check_timeout,
                                    config.unreach_cache_file,
+                                   config.no_unreach_cache,
                                    config.prune_mutant_cmd,
                                    config.prune_mutant_timeout,
                                    config.initial_fuzz_cmd,
