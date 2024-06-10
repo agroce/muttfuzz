@@ -355,7 +355,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     unreach_funcs += 1
                     unreach_branches += len(function_map[u])
             print()
-            print("TOTAL OF", unreach_funcs, "WITH", unreach_branches, "BRANCHES ARE UNREACHABLE")
+            print("TOTAL OF", unreach_funcs, "FUNCTIONS WITH", unreach_branches, "BRANCHES ARE UNREACHABLE")
             print()
 
         if reachability_check_cmd is not None:
