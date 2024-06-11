@@ -125,6 +125,7 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], lineno_only_mutate=[]
                     jumps[loc] = {"opcode": opcode,
                                   "hexdata": bytes.fromhex(fields[1]),
                                   "function_name": function_name,
+                                  "lineno": last_lineno,
                                   "code": line}
                     if function_name not in function_map:
                         function_map[function_name] = [loc]
@@ -195,6 +196,7 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
 
     print("MUTATING JUMP IN", jump["function_name"], "WITH ORIGINAL OPCODE", jump["opcode"])
     print("ORIGINAL CODE:", jump["code"])
+    print("AT LINE:", jump["lineno"])
     if changed in SHORT_NAMES:
         print("CHANGING TO", SHORT_NAMES[changed])
     elif changed in NEAR_NAMES:
