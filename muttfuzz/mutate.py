@@ -49,6 +49,7 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], lineno_only_mutate=[]
     first_inst = False
 
     last_lineno = ""
+    lineno_avoid = False
     
     for line in output.split("\n"):
         try:
@@ -98,8 +99,6 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], lineno_only_mutate=[]
                 continue
             if avoid:
                 continue
-            if lineno_avoid:
-                continue
 
             fields = line.split("\t")
             if len(fields) > 1:
@@ -107,9 +106,13 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], lineno_only_mutate=[]
                 loc = int(loc_bytes, 16) + offset
 
                 if first_inst: # Record location of first instruction for function reachability purposes
+                    # We need this EVEN if it's in STL/whatever, or is instrumentation
                     function_reach[function_name] = loc
                     first_inst = False
-                
+
+                if lineno_avoid:
+                    continue
+
                 found_instrumentation = False
                 for i in INSTRUMENTATION_SET:
                     if i in line:
