@@ -193,6 +193,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             reachability_checks = 0.0
             reachability_hits = 0.0
         else:
+            func_reachability_filename = None
             reachability_filename = None
         while ((time.time() - start_fuzz) - initial_budget) < (budget * fraction_mutant):
             mutant_no += 1
