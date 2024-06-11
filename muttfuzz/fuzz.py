@@ -26,6 +26,10 @@ def parse_args():
                         help='file with a list of functions that are to be mutated')
     parser.add_argument('--avoid_mutating_file', metavar='filename', type=str, default=None,
                         help='file with a list of functions not to mutate')
+    parser.add_argument('--lineno_only_mutate', type=str, default="",
+                        help='string with comma delimited list of patterns to check for in line number')
+    parser.add_argument('--lineno_avoid_mutating', type=str, default="",
+                        help='string with comma delimited list of patterns to check for (but avoid) in line number')
     parser.add_argument('--reachability_check_cmd', type=str, default=None,
                         help='command to check reachability; should return non-zero if some inputs crash')
     parser.add_argument('--reachability_check_timeout', type=float, default=2.0,
@@ -101,6 +105,8 @@ def main():
                                    list(filter(None, config.avoid_mutating.replace(", ", ",").split(","))),
                                    config.only_mutate_file,
                                    config.avoid_mutating_file,
+                                   list(filter(None, config.lineno_only_mutate.replace(", ", ",").split(","))),
+                                   list(filter(None, config.lineno_avoid_mutating.replace(", ", ",").split(","))),
                                    config.reachability_check_cmd,
                                    config.reachability_check_timeout,
                                    config.unreach_cache_file,

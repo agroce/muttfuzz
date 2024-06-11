@@ -34,12 +34,13 @@ def sans_arguments(s):
         pos -= 1
     return s
 
-def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libraries=False):
+def get_jumps(filename, only_mutate=[], avoid_mutating=[], lineno_only_mutate=[], lineno_avoid_mutating=[],
+              mutate_standard_libraries=False):
     jumps = {}
     function_map = {}
     function_reach = {}
 
-    proc = subprocess.Popen(["objdump", "-d", "-C", "--file-offsets", filename],
+    proc = subprocess.Popen(["objdump", "-d", "-C", "-l", "--file-offsets", filename],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
     output = str(out, encoding="utf-8")
@@ -47,8 +48,27 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libra
     avoid = False
     first_inst = False
 
+    last_lineno = ""
+    
     for line in output.split("\n"):
         try:
+            if line[0] == "/" and ":" in line: # hit a line number
+                last_lineno = line
+                lineno_avoid = False
+
+                for s in lineno_avoid_mutating:
+                    if s in last_lineno:
+                        lineno_avoid = True
+                        break
+                if lineno_only_mutate != []:
+                    found = False
+                    for s in lineno_only_mutate:
+                        if s in last_lineno:
+                            found = True
+                            break
+                    if not found:
+                        lineno_avoid = True
+
             if "File Offset" in line and line[-1] == ":":
                 avoid = False
                 function_name = line.split(" ", 1)[1].split(" (File Offset", 1)[0]
@@ -77,6 +97,8 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], mutate_standard_libra
                 first_inst = True
                 continue
             if avoid:
+                continue
+            if lineno_avoid:
                 continue
 
             fields = line.split("\t")
