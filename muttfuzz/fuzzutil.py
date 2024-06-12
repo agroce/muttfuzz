@@ -292,6 +292,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             if mutant_ok:
                 print()
                 print("FUZZING/EVALUATING MUTANT...")
+                sys.stdout.flush()
                 start_run = time.time()
                 r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant, verbose)
                 print("FINISHED IN", round(time.time() - start_run, 2), "SECONDS")
