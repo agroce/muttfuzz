@@ -192,6 +192,7 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
             random.shuffle(all_visited)
             all_visited = sorted(all_visited, key=lambda x: visited_mutants[x])
             (loc, changed) = all_visited[0]
+            jump = jumps[loc]
             done = True
     if (loc, changed) not in visited_mutants:
         visited_mutants[(loc, changed)] = 1
