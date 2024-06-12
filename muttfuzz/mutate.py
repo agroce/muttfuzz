@@ -198,6 +198,7 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
         visited_mutants[(loc, changed)] = 1
     else:
         visited_mutants[(loc, changed)] += 1
+        print("VISITED THIS MUTANT", visited_mutants[(loc, changed)], "TIMES")
 
     print("MUTATING JUMP IN", jump["function_name"], "WITH ORIGINAL OPCODE", jump["opcode"])
     print("ORIGINAL CODE:", jump["code"])
