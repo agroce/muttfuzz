@@ -101,7 +101,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       order=1,
                       score=False,
                       avoid_repeats=False,
-                      repeat_retries=20,
+                      repeat_retries=200,
+                      stop_on_repeat=False,
                       save_mutants=None,
                       verbose=False,
                       skip_default_avoid=False,
@@ -215,6 +216,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                                                    save_mutants=save_mutants, save_count=mutant_no,
                                                    avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
                                                    visited_mutants=visited_mutants, unreach_cache=unreach_cache)
+            if stop_on_repeat and min(visited_mutants.values()) > 1:
+                print("FORCED TO REPEAT A MUTANT, STOPPING ANALYSIS")
+                break
             mutant_ok = True
             if reachability_check_cmd is not None:
                 if verbose:
@@ -316,14 +320,15 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     print("STATUS:")
                     subprocess.call(status_cmd, shell=True)
 
-        print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-        print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
-        restore_executable(executable, executable_code)
-        silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz), verbose)
-        print("COMPLETED AFTER", round(time.time() - start_fuzz, 2), "SECONDS")
-        if status_cmd is not None:
-            print("FINAL STATUS:")
-            subprocess.call(status_cmd, shell=True)
+        if (not score) and (fraction_mutant < 1.0):
+            print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
+            restore_executable(executable, executable_code)
+            silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz), verbose)
+            print("COMPLETED AFTER", round(time.time() - start_fuzz, 2), "SECONDS")
+            if status_cmd is not None:
+                print("FINAL STATUS:")
+                subprocess.call(status_cmd, shell=True)
 
         if reachability_check_cmd is not None:
             print()

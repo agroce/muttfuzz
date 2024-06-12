@@ -60,8 +60,10 @@ def parse_args():
                         help='compute a mutation score, instead of fuzzing')
     parser.add_argument('--avoid_repeats', action='store_true',
                         help='avoid using the same mutant multiple times, if possible')
-    parser.add_argument('--repeat_retries', type=int, default=20,
-                        help='number of times to retry to avoid a repeat mutant (default 20)')
+    parser.add_argument('--repeat_retries', type=int, default=200,
+                        help='number of times to retry to avoid a repeat mutant (default 200)')
+    parser.add_argument('--stop_on_repeat', action='store_true',
+                        help='Terminate analysis if a mutant has to be repeated')
     parser.add_argument('--save_mutants', type=str, default=None,
                         help='directory in which to save generated mutants/checks; no saving if not provided or empty')
     parser.add_argument('-v', '--verbose', action='store_true',
@@ -123,6 +125,7 @@ def main():
                                    config.score,
                                    config.avoid_repeats,
                                    config.repeat_retries,
+                                   config.stop_on_repeat,
                                    config.save_mutants,
                                    config.verbose,
                                    config.skip_default_avoid,
