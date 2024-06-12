@@ -95,43 +95,40 @@ def make_config(pargs):
 def main():
     parsed_args, _ = parse_args()
     config = make_config(parsed_args)
-    try:
-        if config.seed is not None:
-            random.seed(config.seed)
-        fuzzutil.fuzz_with_mutants(config.fuzzer_cmd,
-                                   config.executable,
-                                   config.budget,
-                                   config.time_per_mutant,
-                                   config.fraction_mutant,
-                                   list(filter(None, config.only_mutate.replace(", ", ",").split(","))),
-                                   list(filter(None, config.avoid_mutating.replace(", ", ",").split(","))),
-                                   config.only_mutate_file,
-                                   config.avoid_mutating_file,
-                                   list(filter(None, config.lineno_only_mutate.replace(", ", ",").split(","))),
-                                   list(filter(None, config.lineno_avoid_mutating.replace(", ", ",").split(","))),
-                                   config.reachability_check_cmd,
-                                   config.reachability_check_timeout,
-                                   config.unreach_cache_file,
-                                   config.no_unreach_cache,
-                                   config.prune_mutant_cmd,
-                                   config.prune_mutant_timeout,
-                                   config.initial_fuzz_cmd,
-                                   config.initial_budget,
-                                   config.post_initial_cmd,
-                                   config.post_mutant_cmd,
-                                   config.post_mutant_timeout,
-                                   config.status_cmd,
-                                   config.order,
-                                   config.score,
-                                   config.avoid_repeats,
-                                   config.repeat_retries,
-                                   config.stop_on_repeat,
-                                   config.save_mutants,
-                                   config.verbose,
-                                   config.skip_default_avoid,
-                                   config.mutate_standard_libraries)
-    except IndexError:
-        print("Target binary seems to have no jumps, so mutation will not do anything!")
+    if config.seed is not None:
+        random.seed(config.seed)
+    fuzzutil.fuzz_with_mutants(config.fuzzer_cmd,
+                               config.executable,
+                               config.budget,
+                               config.time_per_mutant,
+                               config.fraction_mutant,
+                               list(filter(None, config.only_mutate.replace(", ", ",").split(","))),
+                               list(filter(None, config.avoid_mutating.replace(", ", ",").split(","))),
+                               config.only_mutate_file,
+                               config.avoid_mutating_file,
+                               list(filter(None, config.lineno_only_mutate.replace(", ", ",").split(","))),
+                               list(filter(None, config.lineno_avoid_mutating.replace(", ", ",").split(","))),
+                               config.reachability_check_cmd,
+                               config.reachability_check_timeout,
+                               config.unreach_cache_file,
+                               config.no_unreach_cache,
+                               config.prune_mutant_cmd,
+                               config.prune_mutant_timeout,
+                               config.initial_fuzz_cmd,
+                               config.initial_budget,
+                               config.post_initial_cmd,
+                               config.post_mutant_cmd,
+                               config.post_mutant_timeout,
+                               config.status_cmd,
+                               config.order,
+                               config.score,
+                               config.avoid_repeats,
+                               config.repeat_retries,
+                               config.stop_on_repeat,
+                               config.save_mutants,
+                               config.verbose,
+                               config.skip_default_avoid,
+                               config.mutate_standard_libraries)
 
 
 
