@@ -132,6 +132,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                                "strncpy", "strcpy", "strnstr", "strstr", "strncmp", "strcmp",
                                "operator new", "operator delete", "register_tm_clones", "_init", "_cxx_global",
                                "_gnu_cxx", "dtors"])
+    start_analyze = time.time()
+
     if only_mutate_file is not None:
         with open(only_mutate_file, 'r') as f:
             for function in f:
@@ -154,6 +156,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         function_score = {}
 
     print("READ EXECUTABLE WITH", len(executable_code), "BYTES")
+    sys.stdout.flush()
     (executable_jumps, function_map, function_reach) = mutate.get_jumps(executable, only_mutate, avoid_mutating,
                                                                         lineno_only_mutate, lineno_avoid_mutating,
                                                                         mutate_standard_libraries)
@@ -176,6 +179,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 for line in f:
                     unreach_cache[line.split("\n")[0]] = True
             print("READ", len(unreach_cache), "UNREACHABLE FUNCTIONS")
+
+    print()
+    print("INITIAL ANALYSIS OF EXECUTABLE TOOK", round(time.time() - start_analyze, 2), "SECONDS")
 
     start_fuzz = time.time()
     mutant_no = 0
