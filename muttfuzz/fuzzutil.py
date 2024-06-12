@@ -216,7 +216,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                                                    save_mutants=save_mutants, save_count=mutant_no,
                                                    avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
                                                    visited_mutants=visited_mutants, unreach_cache=unreach_cache)
-            if stop_on_repeat and min(visited_mutants.values()) > 1:
+            if stop_on_repeat and max(visited_mutants.values()) > 1:
                 print("FORCED TO REPEAT A MUTANT, STOPPING ANALYSIS")
                 break
             mutant_ok = True
