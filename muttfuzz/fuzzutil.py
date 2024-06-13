@@ -295,6 +295,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     if r != 0:
                         print("PRUNING CHECK FAILED WITH RETURN CODE", r)
                         mutant_ok = False
+            if (save_mutants is not None) and (not mutant_ok):
+                # Don't keep unreachable mutants
+                subprocess.call("rm " + save_mutants + "/*_" + str(mutant_no), shell=True)
             if mutant_ok:
                 print()
                 print("FUZZING/EVALUATING MUTANT...")
@@ -307,9 +310,13 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     mutants_run += 1
                     if (r != 0):
                         mutants_killed += 1
+                        if save_mutants is not None:
+                            os.rename(save_mutants + "/mutant_" + str(mutant_no), save_mutants + "/killed_" + str(mutant_no))
                         print ("** MUTANT KILLED **")
                     else:
                         print ("** MUTANT NOT KILLED **")
+                        if save_mutants is not None:
+                            os.rename(save_mutants + "/mutant_" + str(mutant_no), save_mutants + "/surviving_" + str(mutant_no))
                     for function in functions:
                         (kills, total) = function_score[function]
                         if r == 0:
