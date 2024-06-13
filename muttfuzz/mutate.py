@@ -253,15 +253,9 @@ def write_files(mutant, reach, func_reach, new_filename, reachability_filename=N
     if reachability_filename is not None:
         with open(reachability_filename, "wb") as f:
             f.write(reach)
-        if save_mutants is not None:
-            with open(save_mutants + "/reach_" + str(save_count), "wb") as f:
-                f.write(reach)
     if func_reachability_filename is not None:
         with open(func_reachability_filename, "wb") as f:
             f.write(func_reach)
-        if save_mutants is not None:
-            with open(save_mutants + "/func_reach_" + str(save_count), "wb") as f:
-                f.write(func_reach)
 
 def mutate_from(code, jumps, function_reach, new_filename, order=1, reachability_filename=None,
                 func_reachability_filename=None, save_mutants=None, save_count=0, avoid_repeats=False, repeat_retries=20,

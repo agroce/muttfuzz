@@ -316,7 +316,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     else:
                         print ("** MUTANT NOT KILLED **")
                         if save_mutants is not None:
-                            os.rename(save_mutants + "/mutant_" + str(mutant_no), save_mutants + "/surviving_" + str(mutant_no))
+                            os.rename(save_mutants + "/mutant_" + str(mutant_no), save_mutants + "/survived_" + str(mutant_no))
                     for function in functions:
                         (kills, total) = function_score[function]
                         if r == 0:
