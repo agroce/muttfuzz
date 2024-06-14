@@ -34,7 +34,7 @@ def sans_arguments(s):
         pos -= 1
     return s
 
-def get_jumps(filename, only_mutate=[], avoid_mutating=[], lineno_only_mutate=[], lineno_avoid_mutating=[],
+def get_jumps(filename, only_mutate=[], avoid_mutating=[], source_only_mutate=[], source_avoid_mutating=[],
               mutate_standard_libraries=False):
     jumps = {}
     function_map = {}
@@ -48,27 +48,27 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], lineno_only_mutate=[]
     avoid = False
     first_inst = False
 
-    last_lineno = ""
-    lineno_avoid = False
+    last_source = ""
+    source_avoid = False
     
     for line in output.split("\n"):
         try:
             if line[0] == "/" and ":" in line: # hit a line number
-                last_lineno = line
-                lineno_avoid = False
+                last_source = line
+                source_avoid = False
 
-                for s in lineno_avoid_mutating:
-                    if s in last_lineno:
-                        lineno_avoid = True
+                for s in source_avoid_mutating:
+                    if s in last_source:
+                        source_avoid = True
                         break
-                if lineno_only_mutate != []:
+                if source_only_mutate != []:
                     found = False
-                    for s in lineno_only_mutate:
-                        if s in last_lineno:
+                    for s in source_only_mutate:
+                        if s in last_source:
                             found = True
                             break
                     if not found:
-                        lineno_avoid = True
+                        source_avoid = True
 
             if "File Offset" in line and line[-1] == ":":
                 avoid = False
@@ -110,7 +110,7 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], lineno_only_mutate=[]
                     function_reach[function_name] = loc
                     first_inst = False
 
-                if lineno_avoid:
+                if source_avoid:
                     continue
 
                 found_instrumentation = False
@@ -128,7 +128,7 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], lineno_only_mutate=[]
                     jumps[loc] = {"opcode": opcode,
                                   "hexdata": bytes.fromhex(fields[1]),
                                   "function_name": function_name,
-                                  "lineno": last_lineno,
+                                  "source": last_source,
                                   "code": line}
                     if function_name not in function_map:
                         function_map[function_name] = [loc]
@@ -202,7 +202,7 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
 
     print("MUTATING JUMP IN", jump["function_name"], "WITH ORIGINAL OPCODE", jump["opcode"])
     print("ORIGINAL CODE:", jump["code"])
-    print("AT LINE:", jump["lineno"])
+    print("AT LINE:", jump["source"])
     if changed in SHORT_NAMES:
         print("CHANGING TO", SHORT_NAMES[changed])
     elif changed in NEAR_NAMES:

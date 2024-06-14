@@ -85,8 +85,10 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       avoid_mutating=[],
                       only_mutate_file=None,
                       avoid_mutating_file=None,
-                      lineno_only_mutate=[],
-                      lineno_avoid_mutating=[],
+                      source_only_mutate=[],
+                      source_avoid_mutating=[],
+                      source_only_mutate_file=None,
+                      source_avoid_mutating_file=None,
                       reachability_check_cmd=None,
                       reachability_check_timeout=2.0,
                       unreach_cache_file=None,
@@ -143,6 +145,15 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             for function in f:
                 avoid_mutating.append(function[:-1])
 
+    if source_only_mutate_file is not None:
+        with open(source_only_mutate_file, 'r') as f:
+            for source in f:
+                source_only_mutate.append(source[:-1])
+    if source_avoid_mutating_file is not None:
+        with open(source_avoid_mutating_file, 'r') as f:
+            for source in f:
+                source_avoid_mutating.append(source[:-1])
+
     visited_mutants = {}
     unreach_cache = {}
     reach_cache = {} # Can only use effectively for order 1 mutants
@@ -158,7 +169,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
     print("READ EXECUTABLE WITH", len(executable_code), "BYTES")
     sys.stdout.flush()
     (executable_jumps, function_map, function_reach) = mutate.get_jumps(executable, only_mutate, avoid_mutating,
-                                                                        lineno_only_mutate, lineno_avoid_mutating,
+                                                                        source_only_mutate, source_avoid_mutating,
                                                                         mutate_standard_libraries)
     print("FOUND", len(executable_jumps), "MUTABLE JUMPS IN", len(function_map), "FUNCTIONS")
     print("JUMPS BY FUNCTION:")
