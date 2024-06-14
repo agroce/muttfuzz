@@ -5,7 +5,7 @@ import sys, os
 
 setup(
     name='muttfuzz',
-    version='1.1.14',
+    version='1.1.15',
     description='Fuzzing with mutants',
     long_description_content_type="text/markdown",
     long_description=open('README.md').read(),
@@ -14,6 +14,7 @@ setup(
     entry_points="""
     [console_scripts]
     muttfuzz = muttfuzz.fuzz:main
+    libfuzzer_prune = muttfuzz.libfuzzer_prune:main
     """,
     keywords='fuzzing mutation',
     classifiers=[
