@@ -240,7 +240,7 @@ def mutant_from(code, jumps, function_reach, order=1, avoid_repeats=False, repea
     new_code = bytearray(code)
     reach_code = bytearray(code)
     func_reach_code = bytearray(code)
-    for i in range(order): # allows higher-order mutants, though can undo mutations
+    for _ in range(order): # allows higher-order mutants, though can undo mutations
         (function, loc, new_data) = pick_and_change(jumps, avoid_repeats, repeat_retries, visited_mutants, unreach_cache)
         functions.append(function)
         locs.append(loc)
