@@ -1,11 +1,11 @@
 #-*- coding:utf-8 -*-
 
-from setuptools import setup, find_packages
-import sys, os
+from setuptools import setup
+
 
 setup(
     name='muttfuzz',
-    version='1.1.15',
+    version='1.1.16',
     description='Fuzzing with mutants',
     long_description_content_type="text/markdown",
     long_description=open('README.md').read(),
@@ -13,7 +13,7 @@ setup(
     license='MIT',
     entry_points="""
     [console_scripts]
-    muttfuzz = muttfuzz.fuzz:main
+1    muttfuzz = muttfuzz.fuzz:main
     libfuzzer_prune = muttfuzz.libfuzzer_prune:main
     """,
     keywords='fuzzing mutation',

@@ -81,12 +81,12 @@ def silent_run_with_timeout(cmd, timeout, verbose):
 
 # all _cmd arguments can also be Python functions
 def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_mutant,
-                      only_mutate=[],
-                      avoid_mutating=[],
+                      only_mutate=None,
+                      avoid_mutating=None,
                       only_mutate_file=None,
                       avoid_mutating_file=None,
-                      source_only_mutate=[],
-                      source_avoid_mutating=[],
+                      source_only_mutate=None,
+                      source_avoid_mutating=None,
                       source_only_mutate_file=None,
                       source_avoid_mutating_file=None,
                       reachability_check_cmd=None,
@@ -110,6 +110,15 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       verbose=False,
                       skip_default_avoid=False,
                       mutate_standard_libraries=False):
+    if only_mutate is None:
+        only_mutate = []
+    if avoid_mutating is None:
+        avoid_mutating = []
+    if source_only_mutate is None:
+        source_only_mutate = []
+    if source_avoid_mutating is None:
+        source_avoid_mutating = []
+
     print("*" * 80)
     print("STARTING MUTTFUZZ WITH BUDGET", budget, "SECONDS")
     print()
@@ -246,7 +255,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     print("=" * 40)
                     print("CHECKING REACHABILITY")
                 reachability_checks += 1.0
-                # First check the funciton itself is reachable                
+                # First check the funciton itself is reachable
                 if tuple(functions) in reach_cache:
                     print("SKIPPING FUNCTION REACHABILITY, IN CACHE")
                     r = 1
@@ -319,7 +328,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 if score:
                     print()
                     mutants_run += 1
-                    if (r != 0):
+                    if r != 0:
                         mutants_killed += 1
                         if save_mutants is not None:
                             os.rename(save_mutants + "/mutant_" + str(mutant_no), save_mutants + "/killed_" + str(mutant_no))

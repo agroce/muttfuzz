@@ -34,15 +34,24 @@ def sans_arguments(s):
         pos -= 1
     return s
 
-def get_jumps(filename, only_mutate=[], avoid_mutating=[], source_only_mutate=[], source_avoid_mutating=[],
+def get_jumps(filename, only_mutate=None, avoid_mutating=None, source_only_mutate=None, source_avoid_mutating=None,
               mutate_standard_libraries=False):
+    if only_mutate is None:
+        only_mutate = []
+    if avoid_mutating is None:
+        avoid_mutating = []
+    if source_only_mutate is None:
+        source_only_mutate = []
+    if source_avoid_mutating is None:
+        source_avoid_mutating = []
+
     jumps = {}
     function_map = {}
     function_reach = {}
 
     proc = subprocess.Popen(["objdump", "-d", "-C", "-l", "--file-offsets", filename],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate()
+    out, _ = proc.communicate()
     output = str(out, encoding="utf-8")
 
     avoid = False
@@ -50,7 +59,7 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], source_only_mutate=[]
 
     last_source = ""
     source_avoid = False
-    
+
     for line in output.split("\n"):
         try:
             if line[0] == "/" and ":" in line: # hit a line number
@@ -142,26 +151,28 @@ def get_jumps(filename, only_mutate=[], avoid_mutating=[], source_only_mutate=[]
 def different_jump(hexdata):
     P_FLIP = 0.70
     # First, just flip the jump condition 70% of the time
-    if (random.random() <= P_FLIP):
+    if random.random() <= P_FLIP:
         if hexdata[0] == 15: # NEAR JUMP
             return NEAR_FLIP[hexdata[1]]
-        else:
-            return SHORT_FLIP[hexdata[0]]
+        return SHORT_FLIP[hexdata[0]]
     P_DC = 0.40 # P(Don't Care)
     P_DC_JMP = P_DC / (1 - P_DC)
     # Then change to "don't care" (take or avoid) 80% of time, mutate otherwise 20%
-    if (random.random() <= P_DC): # Just remove the jump by providing a NOP sled
+    if random.random() <= P_DC: # Just remove the jump by providing a NOP sled
         return NOP * len(hexdata)
     if hexdata[0] == 15: # NEAR JUMP BYTE CHECK
         if random.random() <= P_DC_JMP:
             return NEAR_JUMPS[-1]
         return random.choice(list(filter(lambda j: j[1] != hexdata[1], NEAR_JUMPS[:-1])))
-    else:
-        if random.random() <= P_DC_JMP:
-            return SHORT_JUMPS[-1]
-        return random.choice(list(filter(lambda j: j[0] != hexdata[0], SHORT_JUMPS[:-1])))
+    if random.random() <= P_DC_JMP:
+        return SHORT_JUMPS[-1]
+    return random.choice(list(filter(lambda j: j[0] != hexdata[0], SHORT_JUMPS[:-1])))
 
-def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutants={}, unreach_cache={}):
+def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutants=None, unreach_cache=None):
+    if visited_mutants is None:
+        visited_mutants = {}
+    if unreach_cache is None:
+        unreach_cache = {}
     done = False
     tries = 0
     while not done:
@@ -218,8 +229,12 @@ def get_code(filename):
     with open(filename, "rb") as f:
         return bytearray(f.read())
 
-def mutant_from(code, jumps, function_reach, order=1, avoid_repeats=False, repeat_retries=20, visited_mutants={},
-                unreach_cache={}):
+def mutant_from(code, jumps, function_reach, order=1, avoid_repeats=False, repeat_retries=20, visited_mutants=None,
+                unreach_cache=None):
+    if visited_mutants is None:
+        visited_mutants = {}
+    if unreach_cache is None:
+        unreach_cache = {}
     functions = []
     locs = []
     new_code = bytearray(code)
@@ -238,11 +253,6 @@ def mutant_from(code, jumps, function_reach, order=1, avoid_repeats=False, repea
             new_code[loc + offset] = new_data[offset]
     return (functions, locs, new_code, reach_code, func_reach_code)
 
-def mutant(filename, order=1, avoid_mutating=[], avoid_repeats=False, repeat_retries=20, visited_mutants={},
-           unreach_cache={}):
-    (jumps, function_map, function_reach) = get_jumps(filename, avoid_mutating)
-    return mutant_from(get_code(filename),jumps, function_reach, order=order)
-
 def write_files(mutant, reach, func_reach, new_filename, reachability_filename=None, func_reachability_filename=None,
                 save_mutants=None, save_count=0):
     with open(new_filename, "wb") as f:
@@ -259,23 +269,16 @@ def write_files(mutant, reach, func_reach, new_filename, reachability_filename=N
 
 def mutate_from(code, jumps, function_reach, new_filename, order=1, reachability_filename=None,
                 func_reachability_filename=None, save_mutants=None, save_count=0, avoid_repeats=False, repeat_retries=20,
-                visited_mutants={}, unreach_cache={}):
+                visited_mutants=None, unreach_cache=None):
+    if visited_mutants is None:
+        visited_mutants = {}
+    if unreach_cache is None:
+        unreach_cache = {}
     (functions, locs, new_mutant, new_reach, new_func_reach) = mutant_from(code, jumps, function_reach, order=order,
                                                                            avoid_repeats=avoid_repeats,
                                                                            repeat_retries=repeat_retries,
                                                                            visited_mutants=visited_mutants,
                                                                            unreach_cache=unreach_cache)
-    write_files(new_mutant, new_reach, new_func_reach, new_filename, reachability_filename, func_reachability_filename,
-                save_mutants, save_count)
-    return (functions, locs)
-
-def mutate(filename, new_filename, order=1, avoid_mutating=[], reachability_filename=None, func_reachability_filename=None,
-           save_mutants=None, save_count=0, avoid_repeats=False, repeat_retries=20, visited_mutants={}, unreach_cache={}):
-    (functions, locs, new_mutant, new_reach, new_func_reach) = mutant(filename, order=order, avoid_mutating=avoid_mutating,
-                                                                      avoid_repeats=avoid_repeats,
-                                                                      repeat_retries=repeat_retries,
-                                                                      visited_mutants=visited_mutants,
-                                                                      unreach_cache=unreach_cache)
     write_files(new_mutant, new_reach, new_func_reach, new_filename, reachability_filename, func_reachability_filename,
                 save_mutants, save_count)
     return (functions, locs)

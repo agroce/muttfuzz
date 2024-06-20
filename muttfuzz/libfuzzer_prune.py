@@ -70,15 +70,17 @@ def main():
         if r == 0:
             print("TESTS PASS!")
             break
+        last_run = None
         for line in output.split("\n"):
             if "Running" in line:
                 last_run = line.split()[1]
         print("REMOVING", last_run)
         pruned += 1
-        if (pruned > max_pruned):
+        if pruned > max_pruned:
             print("TOO MANY INPUTS FAIL")
             sys.exit(2)
-        os.remove(last_run)
+        if last_run is not None:
+            os.remove(last_run)
 
     if pruned < min_pruned:
         print("TOO FEW INPUTS FAIL")
