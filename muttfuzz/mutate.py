@@ -143,7 +143,8 @@ def get_jumps(filename, only_mutate=None, avoid_mutating=None, source_only_mutat
                         function_map[function_name] = [loc]
                     else:
                         function_map[function_name].append(loc)
-        except: # If we can't parse some line in the objdump, just skip it
+        # If we can't parse the line, just ignore it
+        except: #pylint: disable=W0702
             pass
 
     return (jumps, function_map, function_reach)
@@ -185,7 +186,7 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
             rtries += 1
             if rtries > (len(jumps) * 10):
                 print("SOMETHING IS WRONG, NEEDED MORE THAN", rtries, "ATTEMPTS TO FIND REACHABLE JUMP")
-                raise Exception("Unable to find reachable jump!")
+                raise RuntimeError("Unable to find reachable jump!")
             loc = random.choice(list(jumps.keys()))
             jump = jumps[loc]
             # Could know function is unreachable or specific jump is unreachable
@@ -221,8 +222,8 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
     else:
         print("CHANGING TO NOPS")
     full_change = bytearray(jump["hexdata"]) # lets us write the correct set of NOPs for HALT insertion
-    for i in range(len(changed)):
-        full_change[i] = changed[i]
+    for i, change in enumerate(changed):
+        full_change[i] = change
     return (jump["function_name"], loc, changed)
 
 def get_code(filename):
@@ -245,12 +246,12 @@ def mutant_from(code, jumps, function_reach, order=1, avoid_repeats=False, repea
         functions.append(function)
         locs.append(loc)
         func_reach_code[function_reach[function]] = HALT_OP
-        for offset in range(0, len(new_data)):
+        for offset, data in enumerate(new_data):
             if offset == 0:
                 reach_code[loc + offset] = HALT_OP
             else:
                 reach_code[loc + offset] = NOP_OP
-            new_code[loc + offset] = new_data[offset]
+            new_code[loc + offset] = data
     return (functions, locs, new_code, reach_code, func_reach_code)
 
 def write_files(mutant, reach, func_reach, new_filename, reachability_filename=None, func_reachability_filename=None,

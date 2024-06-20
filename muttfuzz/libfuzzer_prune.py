@@ -20,7 +20,7 @@ def silent_run_with_timeout(cmd, timeout):
         with open("cmd_out.txt", 'r') as cmd_out:
             try:
                 cmd_out = cmd_out.read()
-            except:
+            except: #pylint: disable=W0702
                 cmd_out = "ERROR READING OUTPUT"
     finally:
         if P.poll() is None:
@@ -38,9 +38,10 @@ def main():
         new_corpus_dir = sys.argv[4]
         min_pruned = int(sys.argv[5])
         max_pruned = int(sys.argv[6])
-    except:
+    except IndexError:
         print("This tool takes a libfuzzer harness and a corpus, and produces a subset of that corpus that does not fail.")
         print("USAGE: libfuzzer_prune <fuzz_cmd> <timeout> <initial_corpus_dir> <target_corpus_dir> <min_failing> <max_failing>")
+        sys.exit(1)
 
     if not os.path.exists(new_corpus_dir):
         os.mkdir(new_corpus_dir)

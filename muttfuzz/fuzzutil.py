@@ -64,7 +64,7 @@ def silent_run_with_timeout(cmd, timeout, verbose):
         with open("cmd_errors.txt", 'r') as cmd_errors:
             try:
                 cmd_errors_out = cmd_errors.read()
-            except:
+            except: #pylint: disable=W0702
                 cmd_errors_out = "ERROR READING OUTPUT"
         if verbose and len(cmd_errors_out) > 0:
             print("OUTPUT (TRUNCATED TO LAST 20 LINES):")
@@ -184,8 +184,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
     print("JUMPS BY FUNCTION:")
     if reachability_check_cmd is not None:
         function_coverage = {}
-    for function in function_map:
-        print(function, len(function_map[function]))
+    for function, function_jumps in function_map.items():
+        print(function, len(function_jumps))
         if reachability_check_cmd is not None:
             function_coverage[function] = (0.0, 0.0)
         if score:
@@ -369,8 +369,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
 
         if reachability_check_cmd is not None:
             print()
-            for function in function_coverage:
-                (hits, total) = function_coverage[function]
+            for function, (hits, total) in function_coverage.items():
                 if total > 0:
                     print(function + ":", str(round((hits / total) * 100.0, 2)) + "% COVERAGE (OUT OF",
                           str(int(total)) + ")")
@@ -380,8 +379,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
 
         if score:
             print()
-            for function in function_score:
-                (kills, total) = function_score[function]
+            for function, (kills, total) in function_score.items():
                 if total > 0:
                     print(function + ":", str(round((kills / total) * 100.0, 2)) + "% MUTATION SCORE (OUT OF",
                           str(int(total)) + ")")
