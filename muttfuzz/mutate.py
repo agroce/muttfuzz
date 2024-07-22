@@ -304,7 +304,7 @@ def apply_mutant_metadata(code, function_reach, metadata, new_executable):
         int_data = []
         new_pos = pos + 3
         for _ in range(data_len):
-            int_data.append(fields[new_pos])
+            int_data.append(int(fields[new_pos]))
             new_pos += 1
         data = bytearray(int_data)
         for offset, data in enumerate(data):
