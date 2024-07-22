@@ -297,7 +297,7 @@ def apply_mutant_metadata(code, function_reach, metadata, new_executable):
     fields = metadata.split("\n")
     pos = 0
     new_code = bytearray(code)
-    while pos < len(fields):
+    while (pos + 3) < len(fields):
         function = fields[pos]
         loc = int(fields[pos + 1]) + function_reach[function]
         data_len = int(fields[pos + 2])
