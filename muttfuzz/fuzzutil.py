@@ -79,6 +79,13 @@ def silent_run_with_timeout(cmd, timeout, verbose):
 
     return P.returncode
 
+def apply_mutant(base_executable, new_executable, metadata_file):
+    executable_code = mutate.get_code(base_executable)
+    (executable_jumps, function_map, function_reach) = mutate.get_jumps(base_executable)
+    with open(metadata_file, "r") as f:
+        metadata = f.read()
+    mutate.apply_mutant_metadata(executable_code, new_executable, executable_jumps, function_map, function_reach, metadata)
+
 # all _cmd arguments can also be Python functions
 def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_mutant,
                       only_mutate=None,

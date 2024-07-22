@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='muttfuzz',
-    version='1.1.16',
+    version='1.1.17',
     description='Fuzzing with mutants',
     long_description_content_type="text/markdown",
     long_description=open('README.md').read(),
@@ -13,7 +13,8 @@ setup(
     license='MIT',
     entry_points="""
     [console_scripts]
-1    muttfuzz = muttfuzz.fuzz:main
+    muttfuzz = muttfuzz.fuzz:main
+    apply_mutant = muttfuzz.apply_mutant:main
     libfuzzer_prune = muttfuzz.libfuzzer_prune:main
     """,
     keywords='fuzzing mutation',

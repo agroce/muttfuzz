@@ -232,6 +232,7 @@ def get_code(filename):
 
 def mutant_from(code, jumps, function_reach, order=1, avoid_repeats=False, repeat_retries=20, visited_mutants=None,
                 unreach_cache=None):
+    full_mutant_data = ""
     if visited_mutants is None:
         visited_mutants = {}
     if unreach_cache is None:
@@ -243,24 +244,30 @@ def mutant_from(code, jumps, function_reach, order=1, avoid_repeats=False, repea
     func_reach_code = bytearray(code)
     for _ in range(order): # allows higher-order mutants, though can undo mutations
         (function, loc, new_data) = pick_and_change(jumps, avoid_repeats, repeat_retries, visited_mutants, unreach_cache)
+        full_mutant_data += function + "\n"
+        full_mutant_data += str(loc - function_reach[function]) + "\n"
+        full_mutant_data += str(len(new_data)) + "\n"
         functions.append(function)
         locs.append(loc)
         func_reach_code[function_reach[function]] = HALT_OP
         for offset, data in enumerate(new_data):
+            full_mutant_data += str(int(data)) + "\n"
             if offset == 0:
                 reach_code[loc + offset] = HALT_OP
             else:
                 reach_code[loc + offset] = NOP_OP
             new_code[loc + offset] = data
-    return (functions, locs, new_code, reach_code, func_reach_code)
+    return (functions, locs, new_code, full_mutant_data, reach_code, func_reach_code)
 
-def write_files(mutant, reach, func_reach, new_filename, reachability_filename=None, func_reachability_filename=None,
+def write_files(mutant, full_mutant_data, reach, func_reach, new_filename, reachability_filename=None, func_reachability_filename=None,
                 save_mutants=None, save_count=0):
     with open(new_filename, "wb") as f:
         f.write(mutant)
     if save_mutants is not None:
         with open(save_mutants + "/mutant_" + str(save_count), "wb") as f:
             f.write(mutant)
+        with open(save_mutants + "/mutant_" + str(save_count) + ".metadata", "w") as f:
+            f.write(full_mutant_data)
     if reachability_filename is not None:
         with open(reachability_filename, "wb") as f:
             f.write(reach)
@@ -275,11 +282,14 @@ def mutate_from(code, jumps, function_reach, new_filename, order=1, reachability
         visited_mutants = {}
     if unreach_cache is None:
         unreach_cache = {}
-    (functions, locs, new_mutant, new_reach, new_func_reach) = mutant_from(code, jumps, function_reach, order=order,
-                                                                           avoid_repeats=avoid_repeats,
-                                                                           repeat_retries=repeat_retries,
-                                                                           visited_mutants=visited_mutants,
-                                                                           unreach_cache=unreach_cache)
-    write_files(new_mutant, new_reach, new_func_reach, new_filename, reachability_filename, func_reachability_filename,
-                save_mutants, save_count)
+    (functions, locs, new_mutant, full_mutant_data, new_reach, new_func_reach) = mutant_from(code, jumps, function_reach, order=order,
+                                                                                             avoid_repeats=avoid_repeats,
+                                                                                             repeat_retries=repeat_retries,
+                                                                                             visited_mutants=visited_mutants,
+                                                                                             unreach_cache=unreach_cache)
+    write_files(new_mutant, full_mutant_data, new_reach, new_func_reach, new_filename, reachability_filename, func_reachability_filename,
+                save_mutants, save_count, function_reach)
     return (functions, locs)
+
+def apply_mutant_metadata(executable_code, new_executable, executable_jumps, function_map, function_reach, metadata):
+    print("NOT YET IMPLEMENTED")
