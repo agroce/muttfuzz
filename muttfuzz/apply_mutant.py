@@ -35,8 +35,6 @@ def make_config(pargs):
 def main():
     parsed_args, _ = parse_args()
     config = make_config(parsed_args)
-    if config.seed is not None:
-        random.seed(config.seed)
     fuzzutil.apply_mutant(config.base_executable,
                           config.new_executable,
                           config.metadata_file)
