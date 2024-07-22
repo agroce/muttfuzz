@@ -311,4 +311,4 @@ def apply_mutant_metadata(code, function_reach, metadata, new_executable):
         for offset, data in enumerate(data):
             new_code[loc + offset] = data
     with open(new_executable, 'wb') as f:
-        f.write(new_executable)
+        f.write(new_code)
