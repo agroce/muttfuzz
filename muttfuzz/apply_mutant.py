@@ -1,6 +1,5 @@
 import argparse
 from collections import namedtuple
-import random
 import sys
 
 from muttfuzz import fuzzutil
