@@ -84,7 +84,7 @@ def apply_mutant(base_executable, new_executable, metadata_file):
     (executable_jumps, function_map, function_reach) = mutate.get_jumps(base_executable)
     with open(metadata_file, "r") as f:
         metadata = f.read()
-    mutate.apply_mutant_metadata(executable_code, new_executable, executable_jumps, function_map, function_reach, metadata)
+    mutate.apply_mutant_metadata(executable_code, function_reach, metadata, new_executable)
 
 # all _cmd arguments can also be Python functions
 def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_mutant,
@@ -114,6 +114,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       repeat_retries=200,
                       stop_on_repeat=False,
                       save_mutants=None,
+                      save_executables=False,
                       verbose=False,
                       skip_default_avoid=False,
                       mutate_standard_libraries=False):
@@ -249,7 +250,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             (functions, locs) = mutate.mutate_from(executable_code, executable_jumps, function_reach, "/tmp/new_executable",
                                                    order=order, reachability_filename=reachability_filename,
                                                    func_reachability_filename=func_reachability_filename,
-                                                   save_mutants=save_mutants, save_count=mutant_no,
+                                                   save_mutants=save_mutants, save_executables=save_executables, save_count=mutant_no,
                                                    avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
                                                    visited_mutants=visited_mutants, unreach_cache=unreach_cache)
             if stop_on_repeat and max(visited_mutants.values()) > 1:
@@ -338,12 +339,12 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     if r != 0:
                         mutants_killed += 1
                         if save_mutants is not None:
-                            os.rename(save_mutants + "/mutant_" + str(mutant_no), save_mutants + "/killed_" + str(mutant_no))
+                            os.rename(save_mutants + "/mutant_" + str(mutant_no) + ".metadata", save_mutants + "/killed_" + str(mutant_no) + ".metadata")
                         print ("** MUTANT KILLED **")
                     else:
                         print ("** MUTANT NOT KILLED **")
                         if save_mutants is not None:
-                            os.rename(save_mutants + "/mutant_" + str(mutant_no), save_mutants + "/survived_" + str(mutant_no))
+                            os.rename(save_mutants + "/mutant_" + str(mutant_no) + ".metadata", save_mutants + "/survived_" + str(mutant_no) + ".metadata")
                     for function in functions:
                         (kills, total) = function_score[function]
                         if r == 0:

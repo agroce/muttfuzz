@@ -260,12 +260,13 @@ def mutant_from(code, jumps, function_reach, order=1, avoid_repeats=False, repea
     return (functions, locs, new_code, full_mutant_data, reach_code, func_reach_code)
 
 def write_files(mutant, full_mutant_data, reach, func_reach, new_filename, reachability_filename=None, func_reachability_filename=None,
-                save_mutants=None, save_count=0):
+                save_mutants=None, save_executables=False, save_count=0):
     with open(new_filename, "wb") as f:
         f.write(mutant)
     if save_mutants is not None:
-        with open(save_mutants + "/mutant_" + str(save_count), "wb") as f:
-            f.write(mutant)
+        if save_executables:
+            with open(save_mutants + "/mutant_" + str(save_count), "wb") as f:
+                f.write(mutant)
         with open(save_mutants + "/mutant_" + str(save_count) + ".metadata", "w") as f:
             f.write(full_mutant_data)
     if reachability_filename is not None:
@@ -276,7 +277,8 @@ def write_files(mutant, full_mutant_data, reach, func_reach, new_filename, reach
             f.write(func_reach)
 
 def mutate_from(code, jumps, function_reach, new_filename, order=1, reachability_filename=None,
-                func_reachability_filename=None, save_mutants=None, save_count=0, avoid_repeats=False, repeat_retries=20,
+                func_reachability_filename=None, save_mutants=None, save_executables=False, save_count=0,
+                avoid_repeats=False, repeat_retries=20,
                 visited_mutants=None, unreach_cache=None):
     if visited_mutants is None:
         visited_mutants = {}
@@ -291,5 +293,21 @@ def mutate_from(code, jumps, function_reach, new_filename, order=1, reachability
                 save_mutants, save_count, function_reach)
     return (functions, locs)
 
-def apply_mutant_metadata(executable_code, new_executable, executable_jumps, function_map, function_reach, metadata):
-    print("NOT YET IMPLEMENTED")
+def apply_mutant_metadata(code, function_reach, metadata, new_executable):
+    fields = metadata.split("\n")
+    pos = 0
+    new_code = bytearray(code)
+    while pos < len(fields):
+        function = fields[pos]
+        loc = int(fields[pos + 1]) + function_reach[function]
+        data_len = int(fields[pos + 2])
+        int_data = []
+        new_pos = pos + 3
+        for i in range(data_len):
+            int_data.append(fields[new_pos])
+            new_pos += 1
+        data = bytearray(int_data)
+        for offset, data in enumerate(data):
+            new_code[loc + offset] = data
+    with open(new_executable, 'wb') as f:
+        f.write(new_executable)
