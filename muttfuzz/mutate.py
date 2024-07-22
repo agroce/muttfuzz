@@ -265,7 +265,7 @@ def write_files(mutant, full_mutant_data, reach, func_reach, new_filename, reach
         f.write(mutant)
     if save_mutants is not None:
         if save_executables:
-            with open(save_mutants + "/mutant_" + str(save_count), "wb") as f:
+            with open(save_mutants + "/mutant_" + str(save_count) + ".exe", "wb") as f:
                 f.write(mutant)
         with open(save_mutants + "/mutant_" + str(save_count) + ".metadata", "w") as f:
             f.write(full_mutant_data)

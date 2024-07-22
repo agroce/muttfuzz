@@ -325,7 +325,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                         mutant_ok = False
             if (save_mutants is not None) and (not mutant_ok):
                 # Don't keep unreachable mutants
-                subprocess.call("rm " + save_mutants + "/*_" + str(mutant_no), shell=True)
+                subprocess.call("rm " + save_mutants + "/*_" + str(mutant_no) + ".*", shell=True)
             if mutant_ok:
                 print()
                 print("FUZZING/EVALUATING MUTANT...")
@@ -339,11 +339,15 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     if r != 0:
                         mutants_killed += 1
                         if save_mutants is not None:
+                            if save_executables:
+                                os.rename(save_mutants + "/mutant_" + str(mutant_no) + ".exe", save_mutants + "/killed_" + str(mutant_no) + ".exe")
                             os.rename(save_mutants + "/mutant_" + str(mutant_no) + ".metadata", save_mutants + "/killed_" + str(mutant_no) + ".metadata")
                         print ("** MUTANT KILLED **")
                     else:
                         print ("** MUTANT NOT KILLED **")
                         if save_mutants is not None:
+                            if save_executables:
+                                os.rename(save_mutants + "/mutant_" + str(mutant_no) + ".exe", save_mutants + "/survived_" + str(mutant_no) + ".exe")
                             os.rename(save_mutants + "/mutant_" + str(mutant_no) + ".metadata", save_mutants + "/survived_" + str(mutant_no) + ".metadata")
                     for function in functions:
                         (kills, total) = function_score[function]

@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='muttfuzz',
-    version='1.1.25',
+    version='1.1.26',
     description='Fuzzing with mutants',
     long_description_content_type="text/markdown",
     long_description=open('README.md').read(),
