@@ -290,7 +290,7 @@ def mutate_from(code, jumps, function_reach, new_filename, order=1, reachability
                                                                                              visited_mutants=visited_mutants,
                                                                                              unreach_cache=unreach_cache)
     write_files(new_mutant, full_mutant_data, new_reach, new_func_reach, new_filename, reachability_filename, func_reachability_filename,
-                save_mutants, save_count, function_reach)
+                save_mutants, save_executables, save_count, function_reach)
     return (functions, locs)
 
 def apply_mutant_metadata(code, function_reach, metadata, new_executable):
@@ -303,7 +303,7 @@ def apply_mutant_metadata(code, function_reach, metadata, new_executable):
         data_len = int(fields[pos + 2])
         int_data = []
         new_pos = pos + 3
-        for i in range(data_len):
+        for _ in range(data_len):
             int_data.append(fields[new_pos])
             new_pos += 1
         data = bytearray(int_data)

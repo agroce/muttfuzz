@@ -81,7 +81,7 @@ def silent_run_with_timeout(cmd, timeout, verbose):
 
 def apply_mutant(base_executable, new_executable, metadata_file):
     executable_code = mutate.get_code(base_executable)
-    (executable_jumps, function_map, function_reach) = mutate.get_jumps(base_executable)
+    (_, _, function_reach) = mutate.get_jumps(base_executable)
     with open(metadata_file, "r") as f:
         metadata = f.read()
     mutate.apply_mutant_metadata(executable_code, function_reach, metadata, new_executable)
