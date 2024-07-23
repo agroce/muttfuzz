@@ -301,7 +301,7 @@ def apply_mutant_metadata(code, jumps, function_reach, metadata, new_executable)
         functions.append(function)
         loc = int(fields[pos + 1]) + function_reach[function]
         locs.append(loc)
-        print("MUTANT JUMP IN", function, "WITH ORIGINAL OPCODE", jumps[loc]["opcode"])
+        print("MUTATING JUMP IN", function, "WITH ORIGINAL OPCODE", jumps[loc]["opcode"])
         print("ORIGINAL CODE:", jumps[loc]["code"])
         data_len = int(fields[pos + 2])
         int_data = []
