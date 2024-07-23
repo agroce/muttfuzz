@@ -72,6 +72,8 @@ def parse_args():
                         help='directory in which to save generated mutants/checks; no saving if not provided or empty')
     parser.add_argument('--save_executables', action='store_true',
                         help='Save full executables, not just metadata')
+    parser.add_argument('--use_saved_mutants', type=str, default=None,
+                        help='instead of generating mutants, apply mutants in metadata format in given directory')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='more verbose fuzzing, with command outputs')
     parser.add_argument('--skip_default_avoid', action='store_true',

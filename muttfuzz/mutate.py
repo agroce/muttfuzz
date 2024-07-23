@@ -221,9 +221,6 @@ def pick_and_change(jumps, avoid_repeats=False, repeat_retries=20, visited_mutan
         print("CHANGING TO", NEAR_NAMES[changed])
     else:
         print("CHANGING TO NOPS")
-    full_change = bytearray(jump["hexdata"]) # lets us write the correct set of NOPs for HALT insertion
-    for i, change in enumerate(changed):
-        full_change[i] = change
     return (jump["function_name"], loc, changed)
 
 def get_code(filename):
@@ -293,13 +290,19 @@ def mutate_from(code, jumps, function_reach, new_filename, order=1, reachability
                 save_mutants, save_executables, save_count)
     return (functions, locs)
 
-def apply_mutant_metadata(code, function_reach, metadata, new_executable):
+def apply_mutant_metadata(code, jumps, function_reach, metadata, new_executable):
+    functions = []
+    locs = []
     fields = metadata.split("\n")
     pos = 0
     new_code = bytearray(code)
     while (pos + 3) < len(fields):
         function = fields[pos]
+        functions.append(function)
         loc = int(fields[pos + 1]) + function_reach[function]
+        locs.append(loc)
+        print("MUTANT JUMP IN", function, "WITH ORIGINAL OPCODE", jumps[loc]["opcode"])
+        print("ORIGINAL CODE:", jumps[loc]["code"])
         data_len = int(fields[pos + 2])
         int_data = []
         new_pos = pos + 3
@@ -307,8 +310,15 @@ def apply_mutant_metadata(code, function_reach, metadata, new_executable):
             int_data.append(int(fields[new_pos]))
             new_pos += 1
         pos = new_pos
-        data = bytearray(int_data)
-        for offset, data in enumerate(data):
+        changed = bytearray(int_data)
+        if changed in SHORT_NAMES:
+            print("CHANGING TO", SHORT_NAMES[changed])
+        elif changed in NEAR_NAMES:
+            print("CHANGING TO", NEAR_NAMES[changed])
+        else:
+            print("CHANGING TO NOPS")        
+        for offset, data in enumerate(changed):
             new_code[loc + offset] = data
     with open(new_executable, 'wb') as f:
         f.write(new_code)
+    return (functions, locs)
