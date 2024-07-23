@@ -137,6 +137,7 @@ def main():
                                config.stop_on_repeat,
                                config.save_mutants,
                                config.save_executables,
+                               config.use_saved_mutants,
                                config.verbose,
                                config.skip_default_avoid,
                                config.mutate_standard_libraries)
