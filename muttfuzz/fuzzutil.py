@@ -276,7 +276,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     metadata = metadatas[(mutant_no - 1) % len(metadatas)]
                 else:
                     metadata = random.choice(metadatas)
-                (functions, locs) = mutate.apply_mutant(executable_code, executable_jumps, function_reach, metadata, "/tmp/new_executable")
+                (functions, locs) = mutate.apply_mutant_metadata(executable_code, executable_jumps, function_reach, metadata, "/tmp/new_executable")
             mutant_ok = True
             if reachability_check_cmd is not None:
                 if verbose:

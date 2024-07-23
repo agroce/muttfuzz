@@ -316,7 +316,7 @@ def apply_mutant_metadata(code, jumps, function_reach, metadata, new_executable)
         elif changed in NEAR_NAMES:
             print("CHANGING TO", NEAR_NAMES[changed])
         else:
-            print("CHANGING TO NOPS")        
+            print("CHANGING TO NOPS")
         for offset, data in enumerate(changed):
             new_code[loc + offset] = data
     with open(new_executable, 'wb') as f:
