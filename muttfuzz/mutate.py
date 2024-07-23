@@ -310,7 +310,7 @@ def apply_mutant_metadata(code, jumps, function_reach, metadata, new_executable)
             int_data.append(int(fields[new_pos]))
             new_pos += 1
         pos = new_pos
-        changed = bytearray(int_data)
+        changed = bytes(int_data)
         if changed in SHORT_NAMES:
             print("CHANGING TO", SHORT_NAMES[changed])
         elif changed in NEAR_NAMES:
