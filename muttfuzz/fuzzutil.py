@@ -456,7 +456,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         if save_results is not None:
             with open(save_results, 'w') as f:
                 for d in analysis_data:
-                    f.write('"' + d[0] + '"\t' + str(d[1]) + "\t" + str(d[2]) + "\n")
+                    f.write('"' + d[0] + '",' + str(d[1]) + "," + str(d[2]) + "\n")
 
     finally:
         # always restore the original binary!
