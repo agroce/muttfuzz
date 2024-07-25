@@ -118,6 +118,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       save_mutants=None,
                       save_executables=False,
                       use_saved_mutants=None,
+                      save_results=None,
                       verbose=False,
                       skip_default_avoid=False,
                       mutate_standard_libraries=False):
@@ -223,7 +224,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
 
     start_fuzz = time.time()
     mutant_no = 0
-    analysis_times = []
+    analysis_data = []
     try:
         if initial_fuzz_cmd is not None:
             print("=" * 10,
@@ -258,12 +259,12 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             if use_saved_mutants is None:
                 print(round(time.time() - start_fuzz, 2), "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
                 # make a new mutant of the executable; rename avoids hitting a busy executable
-                (functions, locs) = mutate.mutate_from(executable_code, executable_jumps, function_reach, "/tmp/new_executable",
-                                                       order=order, reachability_filename=reachability_filename,
-                                                       func_reachability_filename=func_reachability_filename,
-                                                       save_mutants=save_mutants, save_executables=save_executables, save_count=mutant_no,
-                                                       avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
-                                                       visited_mutants=visited_mutants, unreach_cache=unreach_cache)
+                (functions, locs, meta) = mutate.mutate_from(executable_code, executable_jumps, function_reach, "/tmp/new_executable",
+                                                             order=order, reachability_filename=reachability_filename,
+                                                             func_reachability_filename=func_reachability_filename,
+                                                             save_mutants=save_mutants, save_executables=save_executables, save_count=mutant_no,
+                                                             avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
+                                                             visited_mutants=visited_mutants, unreach_cache=unreach_cache)
                 if stop_on_repeat and max(visited_mutants.values()) > 1:
                     print("FORCED TO REPEAT A MUTANT, STOPPING ANALYSIS")
                     break
@@ -276,8 +277,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     metadata = metadatas[(mutant_no - 1) % len(metadatas)]
                 else:
                     metadata = random.choice(metadatas)
-                (functions, locs) = mutate.apply_mutant_metadata(executable_code, executable_jumps, function_reach, metadata, "/tmp/new_executable")
+                (functions, locs, meta) = mutate.apply_mutant_metadata(executable_code, executable_jumps, function_reach, metadata, "/tmp/new_executable")
             mutant_ok = True
+            mutant_name = meta.replace("\n", "::")
             if reachability_check_cmd is not None:
                 if verbose:
                     print()
@@ -354,7 +356,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 start_run = time.time()
                 r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant, verbose)
                 print("FINISHED IN", round(time.time() - start_run, 2), "SECONDS")
-                analysis_times.append(round(time.time() - start_run, 2))
+                analysis_data.append((mutant_name, round(time.time() - start_run, 2), r))
                 if score:
                     print()
                     mutants_run += 1
@@ -449,8 +451,12 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         visits = visited_mutants.values()
         print("MAXIMUM VISITS TO A MUTANT:", max(visits))
         print("MEAN VISITS TO A MUTANT:", round(sum(visits) / (len(visits) * 1.0), 2))
+        analysis_times = list(map(lambda x:x[1], analysis_data))
         print("MEAN TIME FOR MUTANT EVALUATON:", round(sum(analysis_times) / len(analysis_times)))
-        print("ANALYSIS TIMES:", analysis_times)
+        if save_results is not None:
+            with open(save_results, 'w') as f:
+                for d in analysis_data:
+                    f.write('"' + d[0] + '"\t' + str(d[1]) + "\t" + str(d[2]) + "\n")
 
     finally:
         # always restore the original binary!

@@ -74,6 +74,8 @@ def parse_args():
                         help='Save full executables, not just metadata')
     parser.add_argument('--use_saved_mutants', type=str, default=None,
                         help='instead of generating mutants, apply mutants in metadata format in given directory')
+    parser.add_argument('--save_results', type=str, default=None,
+                        help='filename in which to save comma delimited mutation analysis results')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='more verbose fuzzing, with command outputs')
     parser.add_argument('--skip_default_avoid', action='store_true',
@@ -138,6 +140,7 @@ def main():
                                config.save_mutants,
                                config.save_executables,
                                config.use_saved_mutants,
+                               config.save_results,
                                config.verbose,
                                config.skip_default_avoid,
                                config.mutate_standard_libraries)
