@@ -452,7 +452,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
         print("MAXIMUM VISITS TO A MUTANT:", max(visits))
         print("MEAN VISITS TO A MUTANT:", round(sum(visits) / (len(visits) * 1.0), 2))
         analysis_times = list(map(lambda x:x[1], analysis_data))
-        print("MEAN TIME FOR MUTANT EVALUATON:", round(sum(analysis_times) / len(analysis_times)))
+        print("MEAN TIME FOR MUTANT EVALUATON:", round(sum(analysis_times) / len(analysis_times), 2), "SECONDS")
         if save_results is not None:
             with open(save_results, 'w') as f:
                 for d in analysis_data:
