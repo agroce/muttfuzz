@@ -177,9 +177,12 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
 
     if use_saved_mutants is not None:
         metadatas = []
-        for metadata_file in glob.glob(use_saved_mutants + "*.metadata"):
+        for metadata_file in glob.glob(use_saved_mutants + "/*.metadata"):
             with open(metadata_file, "r") as f:
                 metadatas.append(f.read())
+        if len(metadatas) < 1:
+            print("NO METADATA FILES FOUND!")
+            sys.exit(1)
         random.shuffle(metadatas) # for avoid_repeats, just round robin
 
     visited_mutants = {}
