@@ -299,6 +299,9 @@ def apply_mutant_metadata(code, jumps, function_reach, metadata, new_executable)
     while (pos + 3) < len(fields):
         function = fields[pos]
         functions.append(function)
+        if function not in function_reach:
+            print("MUTANT IS INVALID:", function, "IS NOT PRESENT IN EXECUTABLE")
+            return ([], [], metadata)
         loc = int(fields[pos + 1]) + function_reach[function]
         locs.append(loc)
         if loc not in jumps:
