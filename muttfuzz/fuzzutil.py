@@ -331,7 +331,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                         reachability_hits += 1.0
                 for function in functions:
                     (hits, total) = function_coverage[function]
-xs                    if r == 0:
+                    if r == 0:
                         function_coverage[function] = (hits, total + 1)
                     else:
                         function_coverage[function] = (hits + 1, total + 1)
