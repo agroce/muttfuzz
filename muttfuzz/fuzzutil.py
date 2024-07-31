@@ -282,6 +282,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     metadata = random.choice(metadatas)
                 (functions, locs, meta) = mutate.apply_mutant_metadata(executable_code, executable_jumps, function_reach, metadata, "/tmp/new_executable")
             mutant_ok = True
+            if functions == [] and locs == []: # Can only happen if apply fails
+                mutant_ok = False
             mutant_name = meta.replace("\n", "::")
             if reachability_check_cmd is not None:
                 if verbose:
