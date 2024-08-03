@@ -280,7 +280,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     metadata = metadatas[(mutant_no - 1) % len(metadatas)]
                 else:
                     metadata = random.choice(metadatas)
-                (functions, locs, meta) = mutate.apply_mutant_metadata(executable_code, executable_jumps, function_reach, metadata, "/tmp/new_executable")
+                (functions, locs, meta) = mutate.apply_mutant_metadata(executable_code, executable_jumps, function_reach, metadata, "/tmp/new_executable",
+                                                                       visited_mutants)
             mutant_ok = True
             if not functions and not locs: # Can only happen if apply fails
                 mutant_ok = False

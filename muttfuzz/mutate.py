@@ -290,7 +290,9 @@ def mutate_from(code, jumps, function_reach, new_filename, order=1, reachability
                 save_mutants, save_executables, save_count)
     return (functions, locs, full_mutant_data)
 
-def apply_mutant_metadata(code, jumps, function_reach, metadata, new_executable):
+def apply_mutant_metadata(code, jumps, function_reach, metadata, new_executable, visited_mutants=None):
+    if visited_mutants is None:
+        visited_mutants = {}
     functions = []
     locs = []
     fields = metadata.split("\n")
@@ -317,6 +319,11 @@ def apply_mutant_metadata(code, jumps, function_reach, metadata, new_executable)
             new_pos += 1
         pos = new_pos
         changed = bytes(int_data)
+        if (loc, changed) not in visited_mutants:
+            visited_mutants[(loc, changed)] = 1
+        else:
+            visited_mutants[(loc, changed)] += 1
+            print("VISITED THIS MUTANT", visited_mutants[(loc, changed)], "TIMES")
         if changed in SHORT_NAMES:
             print("CHANGING TO", SHORT_NAMES[changed])
         elif changed in NEAR_NAMES:
