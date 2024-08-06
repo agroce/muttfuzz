@@ -17,18 +17,18 @@ for f in files:
         for row in rows:
             roots[root].append(row)
 
-for r in roots.keys():
+for r in roots:
     d_t = list(map(lambda x:x[1], roots[r]))
     d_m = list(map(lambda x:x[2], roots[r]))
-    score = len(list(filter(lambda x: x != 0, d_m))) / len(list(d_m)) 
+    score = len(list(filter(lambda x: x != 0, d_m))) / len(list(d_m))
     print(r, "MEAN:", round(scipy.mean(d_t), 2), "MEDIAN:", round(scipy.median(d_t), 2), "RANGE: [" + round(min(d_t), 2), "-", round(max(d_t), 2), "]")
     print(r, "MUTATION SCORE:", round(score, 2))
     print()
-    
-for r1 in roots.keys():
+
+for r1 in roots:
     d_t_1 = list(map(lambda x:x[1], roots[r1]))
-    for r2 in roots.keys():
-        if (r1 < r2):
+    for r2 in roots:
+        if r1 < r2:
             d_t_2 = list(map(lambda x:x[1], roots[r2]))
             try:
                 print("Mann-Whitney U:", scipy.stats.mannwhitneyu(d_t_1, d_t_2))
