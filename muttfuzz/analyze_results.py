@@ -21,7 +21,8 @@ for r, data in roots.items():
     d_t = list(map(lambda x:float(x[1]), data))
     d_m = list(map(lambda x:int(x[2]), data))
     score = len(list(filter(lambda x: x != 0, d_m))) / len(list(d_m))
-    print(r, "MEAN:", round(scipy.mean(d_t), 2), "MEDIAN:", round(scipy.median(d_t), 2), "RANGE: [" + round(min(d_t), 2), "-", round(max(d_t), 2), "]")
+    print(r, "MEAN:", round(scipy.mean(d_t), 2), "MEDIAN:", round(scipy.median(d_t), 2),
+          "RANGE: [" + str(round(min(d_t), 2)) + " - " + str(round(max(d_t), 2)) + "]")
     print(r, "MUTATION SCORE:", round(score, 2))
     print()
 
