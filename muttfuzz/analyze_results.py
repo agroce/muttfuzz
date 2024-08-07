@@ -28,7 +28,7 @@ for r, data in roots.items():
 
 for r1, data1 in roots.items():
     d_t_1 = list(map(lambda x:float(x[1]), data1))
-    for r2, data2 in roots:
+    for r2, data2 in roots.items():
         if r1 < r2:
             d_t_2 = list(map(lambda x:float(x[1]), data2))
             try:
