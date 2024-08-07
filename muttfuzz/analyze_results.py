@@ -9,6 +9,7 @@ def main():
 
     roots = {}
 
+    all_mutants = {}
     ever_unkilled = {}
 
     for f in files:
@@ -19,8 +20,12 @@ def main():
             rows = csv.reader(fr)
             for row in rows:
                 roots[root].append(row)
+                all_mutants[row[0]] = True
                 if int(row[2]) == 0 and row[0] not in ever_unkilled:
                     ever_unkilled[row[0]] = True
+
+    print("THERE ARE", len(all_mutants.keys()), "MUTANTS")
+    print()
 
     for r, data in roots.items():
         d_t = list(map(lambda x:float(x[1]), data))
