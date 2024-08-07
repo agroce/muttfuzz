@@ -10,7 +10,7 @@ def main():
     roots = {}
 
     ever_unkilled = {}
-    
+
     for f in files:
         root = f.split(".")[0]
         if root not in roots:
