@@ -20,7 +20,7 @@ def main():
     ever_unkilled = {}
 
     max_unkilled = 0.0
-    
+
     for f in files:
         root = f.split(".")[0]
         if root not in roots:
@@ -32,8 +32,7 @@ def main():
                 all_mutants[row[0]] = True
                 if int(row[2]) == 0:
                     ever_unkilled[row[0]] = True
-                    if float(row[1]) > max_unkilled:
-                        max_unkilled = float(row[1])
+                    max_unkilled = max(max_unkilled, float(row[1]))
 
     print("THERE ARE", len(all_mutants.keys()), "MUTANTS")
     print()
