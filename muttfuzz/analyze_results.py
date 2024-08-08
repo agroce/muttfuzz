@@ -1,10 +1,17 @@
 import csv
 import sys
 
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
 import scipy
 import scipy.stats
 
 def main():
+    matplotlib.rcParams['pdf.fonttype'] = 42
+    matplotlib.rcParams['ps.fonttype'] = 42
+    
     files = sys.argv[1:]
 
     roots = {}
@@ -27,8 +34,13 @@ def main():
     print("THERE ARE", len(all_mutants.keys()), "MUTANTS")
     print()
 
+    graph = []
+    label = []
+    
     for r, data in roots.items():
         d_t = list(map(lambda x:float(x[1]), data))
+        graph.append(d_t)
+        label.append(r)
         d_m = list(map(lambda x:int(x[2]), data))
         score = len(list(filter(lambda x: x != 0, d_m))) / len(list(d_m))
         print(r, "MEAN:", round(scipy.mean(d_t), 2), "MEDIAN:", round(scipy.median(d_t), 2),
@@ -46,14 +58,26 @@ def main():
                 except ValueError:
                     pass
 
+    f1 = plt.figure()
+    plt.ylabel("Time(s)")
+    plt.boxplot(graph, labels=label)
+    pp = PdfPages("all.pdf")
+    pp.savefig(f1)
+    pp.close()
+
     print()
     print("STATISTICS OVER ONLY MUTANTS EVER UNKILLED")
     print("THERE ARE", len(ever_unkilled.keys()), "SUCH MUTANTS")
     print()
 
+    graph = []
+    label = []
+
     for r, data in roots.items():
         data_f = list(filter(lambda x: x[0] in ever_unkilled, data))
         d_t = list(map(lambda x:float(x[1]), data_f))
+        graph.append(d_t)
+        label.append(r)
         d_m = list(map(lambda x:int(x[2]), data_f))
         score = len(list(filter(lambda x: x != 0, d_m))) / len(list(d_m))
         print(r, "MEAN:", round(scipy.mean(d_t), 2), "MEDIAN:", round(scipy.median(d_t), 2),
@@ -72,3 +96,10 @@ def main():
                     print("Mann-Whitney U:", scipy.stats.mannwhitneyu(d_t_1, d_t_2))
                 except ValueError:
                     pass
+
+    f2 = plt.figure()
+    plt.ylabel("Time(s)")
+    plt.boxplot(graph, labels=label)
+    pp = PdfPages("unkilled.pdf")
+    pp.savefig(f2)
+    pp.close()
