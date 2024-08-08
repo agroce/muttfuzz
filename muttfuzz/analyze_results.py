@@ -19,6 +19,8 @@ def main():
     all_mutants = {}
     ever_unkilled = {}
 
+    max_unkilled = 0.0
+    
     for f in files:
         root = f.split(".")[0]
         if root not in roots:
@@ -28,11 +30,27 @@ def main():
             for row in rows:
                 roots[root].append(row)
                 all_mutants[row[0]] = True
-                if int(row[2]) == 0 and row[0] not in ever_unkilled:
+                if int(row[2]) == 0:
                     ever_unkilled[row[0]] = True
+                    if float(row[1]) > max_unkilled:
+                        max_unkilled = float(row[1])
 
     print("THERE ARE", len(all_mutants.keys()), "MUTANTS")
     print()
+
+    print("NOTE: ALL UNKILLED MUTANTS WILL BE ASSIGNED THE MAXIMUM TIME FOR AN UNKILLED MUTANT")
+    print()
+
+    cap_max = {}
+    for r, data in roots.items():
+        new_data = []
+        for row in data:
+            new_row = list(row)
+            if int(row[2]) == 0:
+                new_row[1] = max_unkilled
+            new_data.append(new_row)
+        cap_max[r] = new_data
+    roots = cap_max
 
     graph = []
     label = []
