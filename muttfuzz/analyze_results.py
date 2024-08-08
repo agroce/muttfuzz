@@ -11,7 +11,7 @@ import scipy.stats
 def main():
     matplotlib.rcParams['pdf.fonttype'] = 42
     matplotlib.rcParams['ps.fonttype'] = 42
-    
+
     files = sys.argv[1:]
 
     roots = {}
@@ -36,7 +36,7 @@ def main():
 
     graph = []
     label = []
-    
+
     for r, data in roots.items():
         d_t = list(map(lambda x:float(x[1]), data))
         graph.append(d_t)
