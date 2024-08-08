@@ -46,6 +46,9 @@ def main():
         for row in data:
             new_row = list(row)
             if int(row[2]) == 0:
+                if (max_unkilled - float(row[1])) > (max_unkilled * 0.1):
+                    print("WARNING: REPLACING DATA POINT FOR UNKILLED MUTANT WITH MORE THAN 10% DIFFERENCE")
+                    print("ORIGINAL VALUE:", float(row[1]), "REPLACED WITH", max_unkilled)
                 new_row[1] = max_unkilled
             new_data.append(new_row)
         cap_max[r] = new_data
@@ -59,6 +62,7 @@ def main():
         graph.append(d_t)
         label.append(r)
         d_m = list(map(lambda x:int(x[2]), data))
+        print (r, "# DATA POINTS:", len(d_t))
         score = len(list(filter(lambda x: x != 0, d_m))) / len(list(d_m))
         print(r, "MEAN:", round(scipy.mean(d_t), 2), "MEDIAN:", round(scipy.median(d_t), 2),
               "RANGE: [" + str(round(min(d_t), 2)) + " - " + str(round(max(d_t), 2)) + "]")
@@ -81,6 +85,7 @@ def main():
     pp = PdfPages("all.pdf")
     pp.savefig(f1)
     pp.close()
+    print("SAVED GRAPH OF ALL DATA TO all.pdf")
 
     print()
     print("STATISTICS OVER ONLY MUTANTS EVER UNKILLED")
@@ -96,6 +101,7 @@ def main():
         graph.append(d_t)
         label.append(r)
         d_m = list(map(lambda x:int(x[2]), data_f))
+        print (r, "# DATA POINTS:", len(d_t))
         score = len(list(filter(lambda x: x != 0, d_m))) / len(list(d_m))
         print(r, "MEAN:", round(scipy.mean(d_t), 2), "MEDIAN:", round(scipy.median(d_t), 2),
               "RANGE: [" + str(round(min(d_t), 2)) + " - " + str(round(max(d_t), 2)) + "]")
@@ -120,3 +126,4 @@ def main():
     pp = PdfPages("unkilled.pdf")
     pp.savefig(f2)
     pp.close()
+    print("SAVED GRAPH OF DATA OVER EVER-UNKILLED MUTANTS TO unkilled.pdf")
