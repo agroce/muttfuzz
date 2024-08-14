@@ -65,7 +65,9 @@ def silent_run_with_timeout(cmd, timeout, verbose, zero_timeout=False):
             while (P.poll() is None) and ((time.time() - start_P) < timeout):
                 time.sleep(min(0.5, timeout / 10.0)) # Allow for small timeouts
             if P.poll() is None:
+                print("KILLING SUBPROCESS DUE TO TIMEOUT")
                 os.killpg(os.getpgid(P.pid), signal.SIGTERM)
+                timed_out = True
         with open("cmd_errors.txt", 'r') as cmd_errors:
             try:
                 cmd_errors_out = cmd_errors.read()
