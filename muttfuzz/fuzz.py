@@ -68,6 +68,8 @@ def parse_args():
                         help='number of times to retry to avoid a repeat mutant (default 200)')
     parser.add_argument('--stop_on_repeat', action='store_true',
                         help='Terminate analysis if a mutant has to be repeated')
+    parser.add_argument('--no_timeout_kills', action='store_true',
+                        help='Timeout during mutant analysis will not be conuted as a mutant kill')
     parser.add_argument('--save_mutants', type=str, default=None,
                         help='directory in which to save generated mutants/checks; no saving if not provided or empty')
     parser.add_argument('--save_executables', action='store_true',
@@ -137,6 +139,7 @@ def main():
                                config.avoid_repeats,
                                config.repeat_retries,
                                config.stop_on_repeat,
+                               config.no_timeout_kills,
                                config.save_mutants,
                                config.save_executables,
                                config.use_saved_mutants,

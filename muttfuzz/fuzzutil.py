@@ -38,7 +38,7 @@ def restore_executable(executable, executable_code):
     subprocess.check_call(['chmod', '+x', executable])
 
 
-def silent_run_with_timeout(cmd, timeout, verbose):
+def silent_run_with_timeout(cmd, timeout, verbose, zero_timeout=False):
     # Allow functions instead of commands, for use as a library from a script
     if verbose:
         print("*" * 30)
@@ -50,11 +50,14 @@ def silent_run_with_timeout(cmd, timeout, verbose):
                 return cmd()
         except TimeoutException:
             print("ABORTED WITH TIMEOUT")
+            if zero_timeout:
+                return 0
             return 1 # non-zero return code may be interpreted as failure/crash/timeout
     dnull = open(os.devnull, 'w')
     if verbose:
         print("EXECUTING", cmd)
     start_P = time.time()
+    timed_out = False
     try:
         with open("cmd_errors.txt", 'w') as cmd_errors:
             P = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid,
@@ -75,10 +78,13 @@ def silent_run_with_timeout(cmd, timeout, verbose):
         if P.poll() is None:
             print("KILLING SUBPROCESS DUE TO TIMEOUT")
             os.killpg(os.getpgid(P.pid), signal.SIGTERM)
+            timed_out = True
     if verbose:
-        print("COMPLETE IN", round(time.time() - start_P, 2), "SECONDS")
+        if not timed_out:
+            print("COMPLETED IN", round(time.time() - start_P, 2), "SECONDS")
         print("*" * 30)
-
+    if timed_out and zero_timeout:
+        return 0
     return P.returncode
 
 def apply_mutant(base_executable, new_executable, metadata_file):
@@ -115,6 +121,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       avoid_repeats=False,
                       repeat_retries=200,
                       stop_on_repeat=False,
+                      no_timeout_kills=False,
                       save_mutants=None,
                       save_executables=False,
                       use_saved_mutants=None,
@@ -360,7 +367,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 print("FUZZING/EVALUATING MUTANT...")
                 sys.stdout.flush()
                 start_run = time.time()
-                r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant, verbose)
+                r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant, verbose, zero_timeout=no_timeout_kills)
                 print("FINISHED IN", round(time.time() - start_run, 2), "SECONDS")
                 analysis_data.append((mutant_name, round(time.time() - start_run, 2), r))
                 if score:
