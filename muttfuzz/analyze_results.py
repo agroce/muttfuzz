@@ -18,6 +18,7 @@ def main():
 
     all_mutants = {}
     ever_unkilled = {}
+    never_unkilled = {}
 
     max_unkilled = 0.0
 
@@ -33,6 +34,11 @@ def main():
                 if int(row[2]) == 0:
                     ever_unkilled[row[0]] = True
                     max_unkilled = max(max_unkilled, float(row[1]))
+
+    for r, data in roots.items()
+        for row in data:
+            if row[0] not in ever_unkilled:
+                never_unkilled[row[0]] = True
 
     print("THERE ARE", len(all_mutants.keys()), "MUTANTS")
     print()
@@ -127,3 +133,44 @@ def main():
     pp.savefig(f2)
     pp.close()
     print("SAVED GRAPH OF DATA OVER EVER-UNKILLED MUTANTS TO unkilled.pdf")
+
+    print()
+    print("STATISTICS OVER ONLY MUTANTS NEVER UNKILLED")
+    print("THERE ARE", len(never_unkilled.keys()), "SUCH MUTANTS")
+    print()
+
+    graph = []
+    label = []
+
+    for r, data in roots.items():
+        data_f = list(filter(lambda x: x[0] in never_unkilled, data))
+        d_t = list(map(lambda x:float(x[1]), data_f))
+        graph.append(d_t)
+        label.append(r)
+        d_m = list(map(lambda x:int(x[2]), data_f))
+        print (r, "# DATA POINTS:", len(d_t))
+        score = len(list(filter(lambda x: x != 0, d_m))) / len(list(d_m))
+        print(r, "MEAN:", round(scipy.mean(d_t), 2), "MEDIAN:", round(scipy.median(d_t), 2),
+              "RANGE: [" + str(round(min(d_t), 2)) + " - " + str(round(max(d_t), 2)) + "]")
+        print(r, "MUTATION SCORE:", round(score, 2))
+        print()
+
+    for r1, data1 in roots.items():
+        data1_f = list(filter(lambda x: x[0] in never_unkilled, data1))
+        d_t_1 = list(map(lambda x:float(x[1]), data1_f))
+        for r2, data2 in roots.items():
+            if r1 < r2:
+                data2_f = list(filter(lambda x: x[0] in never_unkilled, data2))
+                d_t_2 = list(map(lambda x:float(x[1]), data2_f))
+                try:
+                    print("Mann-Whitney U:", scipy.stats.mannwhitneyu(d_t_1, d_t_2))
+                except ValueError:
+                    pass
+
+    f2 = plt.figure()
+    plt.ylabel("Time(s)")
+    plt.boxplot(graph, labels=label)
+    pp = PdfPages("alwayskilled.pdf")
+    pp.savefig(f2)
+    pp.close()
+    print("SAVED GRAPH OF DATA OVER NEVER-UNKILLED MUTANTS TO alwayskilled.pdf")
