@@ -35,7 +35,7 @@ def main():
                     ever_unkilled[row[0]] = True
                     max_unkilled = max(max_unkilled, float(row[1]))
 
-    for r, data in roots.items()
+    for r, data in roots.items():
         for row in data:
             if row[0] not in ever_unkilled:
                 never_unkilled[row[0]] = True
