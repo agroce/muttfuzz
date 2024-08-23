@@ -279,6 +279,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                                                              visited_mutants=visited_mutants, unreach_cache=unreach_cache)
                 if stop_on_repeat and max(visited_mutants.values()) > 1:
                     print("FORCED TO REPEAT A MUTANT, STOPPING ANALYSIS")
+                    if save_mutants is not None:
+                        # Don't keep repeated mutants
+                        subprocess.call("rm " + save_mutants + "/*_" + str(mutant_no) + ".*", shell=True)
                     break
             else:
                 print(round(time.time() - start_fuzz, 2), "ELAPSED: APPLYING MUTANT #" + str(mutant_no))
