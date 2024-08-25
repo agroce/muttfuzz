@@ -4,9 +4,6 @@ def test_record_replay():
     r = subprocess.call(["gcc -o toy test/toy.c"], shell=True)
     assert r == 0
 
-    r = subprocess.call(["python setup.py install --user"], shell=True)
-    assert r == 0
-
     with open("out1.txt", 'w') as f:
         r = subprocess.call(["mkdir mutants; rm mutants/*; muttfuzz \"./toy\" toy --score --avoid_repeats --stop_on_repeat --repeat_retries 2000 --save_results analysis.csv --save_mutants mutants"], shell=True, stdout=f, stderr=f)
     with open("out1.txt", 'r') as f:
