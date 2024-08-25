@@ -5,7 +5,7 @@ def test_record_replay():
     assert r == 0
 
     with open("out1.txt", 'w') as f:
-        r = subprocess.call(["mkdir mutants; muttfuzz \"./toy\" toy --score --avoid_repeats --stop_on_repeat --repeat_retries 2000 --save_results analysis.csv --save_mutants mutants"], shell=True, stdout=f, stderr=f)
+        r = subprocess.call(["mkdir mutants; rm mutants/*; muttfuzz \"./toy\" toy --score --avoid_repeats --stop_on_repeat --repeat_retries 2000 --save_results analysis.csv --save_mutants mutants"], shell=True, stdout=f, stderr=f)
     assert r == 0
     with open("out1.txt", 'r') as f:
         contents = f.read()
