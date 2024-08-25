@@ -3,7 +3,7 @@ import subprocess
 import pytest
 
 def test_record_replay():
-    r = subprocess.call(["gcc -o test/toy toy.c"], shell=True)
+    r = subprocess.call(["gcc -o toy test/toy.c"], shell=True)
     assert(r == 0)
 
     with open("out1.txt", 'w') as f:
