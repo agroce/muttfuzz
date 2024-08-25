@@ -1,7 +1,7 @@
 import subprocess
 
 def test_record_replay():
-    r = subprocess.call(["gcc -o toy test/toy.c"], shell=True)
+    r = subprocess.call(["gcc -o toy ../test/toy.c"], shell=True)
     assert r == 0
 
     with open("out1.txt", 'w') as f:
@@ -9,6 +9,7 @@ def test_record_replay():
     assert r == 0
     with open("out1.txt", 'r') as f:
         contents = f.read()
+    print(contents)
     assert "FINAL MUTATION SCORE OVER 14 EXECUTED MUTANTS: 57.14%" in contents
 
     with open("out2.txt", 'w') as f:
@@ -16,4 +17,5 @@ def test_record_replay():
     assert r == 0
     with open("out2.txt", 'r') as f:
         contents = f.read()
+    print(contents)
     assert "FINAL MUTATION SCORE OVER 14 EXECUTED MUTANTS: 57.14%" in contents
