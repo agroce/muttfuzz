@@ -9,12 +9,11 @@ def test_record_replay():
     assert r == 0
     with open("out1.txt", 'r') as f:
         contents = f.read()
-    assert("FINAL MUTATION SCORE OVER 14 EXECUTED MUTANTS: 57.14%" in contents)
+    assert "FINAL MUTATION SCORE OVER 14 EXECUTED MUTANTS: 57.14%" in contents
 
     with open("out2.txt", 'w') as f:
         r = subprocess.call(["muttfuzz \"./toy\" toy --score --avoid_repeats --stop_on_repeat --save_results s_analysis.csv --use_saved_mutants mutants"], shell=True, stdout=f, stderr=f)
     assert r == 0
     with open("out2.txt", 'r') as f:
         contents = f.read()
-    assert("FINAL MUTATION SCORE OVER 14 EXECUTED MUTANTS: 57.14%" in contents)
-
+    assert "FINAL MUTATION SCORE OVER 14 EXECUTED MUTANTS: 57.14%" in contents
