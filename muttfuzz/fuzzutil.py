@@ -285,7 +285,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     break
             else:
                 print(round(time.time() - start_fuzz, 2), "ELAPSED: APPLYING MUTANT #" + str(mutant_no))
-                if stop_on_repeat and (mutant_no >= len(metadatas)):
+                if stop_on_repeat and ((mutant_no + 1) >= len(metadatas)):
                     print("FORCED TO REPEAT A MUTANT, STOPPING ANALYSIS")
                     break
                 if avoid_repeats:
