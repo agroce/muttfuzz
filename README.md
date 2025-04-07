@@ -60,6 +60,8 @@ This example shows how to use MuttFuzz with AFL (or AFLplusplus) but using it wi
 
 Note that reachability and pruning work as usual here.  Pruning will seldom be needed, but there may be some notion of invalid mutants you want to use.  Reachability lets you compute  a score over mutants the corpus actually executes, which is usually more informative than including mutants not even executed.  The distinction is between "mutation score" and "covered mutation score" (see [this paper](https://agroce.github.io/issre23.pdf)).  Note that MuttFuzz, when a reachability check is included, always shows a running and final total of estimated coverage of mutants.  In principle a mutation score estimate could be produced from the prune checks during fuzzing campaigns, but the fact that fuzzing (we hope) changes the power of the corpus will make this total unstable and hard to interpret.
 
+While this isn't the main focus of MuttFuzz, the Bitcoin Core fuzzing team has done some intial work experimenting with using this to evaluate changes in their fuzz efforts for long-running (e.g. OSS-Fuzz) campaigns with extensive corpus history.  Paper/details forthcoming.
+
 **Q**: Why "MuttFuzz"?
 
 **A**: When I (Alex) created the repo, I made a typo, but I liked it.  Certainly memorable compared to "mutfuzz" for "mutant fuzzer".
