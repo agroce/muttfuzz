@@ -9,6 +9,7 @@ setup(
     description='Fuzzing with mutants',
     long_description_content_type="text/markdown",
     long_description=open('README.md').read(),
+    author="Alex Groce",
     packages=['muttfuzz',],
     license='MIT',
     entry_points="""
