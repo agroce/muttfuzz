@@ -48,7 +48,7 @@ This example shows how to use MuttFuzz with AFL (or AFLplusplus) but using it wi
 
 **Q**: How good is MuttFuzz?
 
-**A**: We're not sure yet, experiments are pending.  We know that a source-based variant of the same technique, somewhat less tuned, outperformed AFLplusplus on FuzzBench, so we're optimistic that this is both easier to use and even more effective than that.  In our limited experiments thus far, it is dramatically improving fuzzing a toy benchmark using AFL, much more than the source-based approach did.
+**A**: We're not sure yet, experiments are pending.  We know that a source-based variant of the same technique, somewhat less tuned, outperformed AFLplusplus on FuzzBench, so we're optimistic that this is both easier to use and even more effective than that.  In our limited experiments thus far, it is dramatically improving fuzzing a toy benchmark using AFL, much more than the source-based approach did, and, one more realistic "anecdata" suggests it's well worth trying out on stubborn fuzzing targets.  An extremely subtle bug in a Turbo Boyer-Moore-Horspool search implementation, originally detected after literally months of fuzzing and billions of executions, via this harness (https://github.com/agroce/deepstate-boyer-moore-horspool/), can be detected easily and consistently using MuttFuzz.  Your target may have similar behaviors that are rendered much easier to detect via mutant fuzzing.
 
 **Q**: Why is fuzzing mutants helpful?
 
