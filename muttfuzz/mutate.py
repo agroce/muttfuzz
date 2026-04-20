@@ -89,6 +89,17 @@ def get_jumps(filename, only_mutate=None, avoid_mutating=None, source_only_mutat
                         avoid = True
                     if "boost::" in just_name:
                         avoid = True
+                # Also avoid mutating ANY code inside a function whose name
+                # matches fuzzer/compiler-injected instrumentation (issue #1).
+                # The previous behavior only skipped individual disassembly
+                # lines that mentioned an instrumentation marker, which still
+                # allowed mutations inside e.g. __afl_maybe_log or a
+                # DeepState_* harness when a given line did not itself
+                # reference the marker.
+                for marker in INSTRUMENTATION_SET:
+                    if marker in just_name:
+                        avoid = True
+                        break
                 for s in avoid_mutating:
                     if s in just_name:
                         avoid = True
