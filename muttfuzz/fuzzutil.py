@@ -2,9 +2,11 @@ from datetime import datetime
 import glob
 import os
 import random
+import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from contextlib import contextmanager
 
@@ -30,11 +32,22 @@ def time_limit(seconds):
         signal.alarm(0)
 
 
-def restore_executable(executable, executable_code):
+def make_work_dir(executable):
+    """Scratch directory for mutant/reachability/restore copies of the executable. It lives
+    next to the executable because they are moved into place with os.rename, which fails
+    across filesystems (e.g. /tmp vs. a Docker volume), and it is per-run, so several
+    muttfuzz runs on one machine do not overwrite each other's files."""
+    return tempfile.mkdtemp(prefix=".muttfuzz_", dir=os.path.dirname(os.path.abspath(executable)))
+
+
+def restore_executable(executable, executable_code, work_dir=None):
     # We do this because it could still be busy if fuzzer hasn't shut down yet
-    with open("/tmp/restore_executable", 'wb') as f:
+    if work_dir is None:
+        work_dir = os.path.dirname(os.path.abspath(executable))
+    tmp = os.path.join(work_dir, ".muttfuzz_restore_executable")
+    with open(tmp, 'wb') as f:
         f.write(executable_code)
-    os.rename("/tmp/restore_executable", executable)
+    os.rename(tmp, executable)
     subprocess.check_call(['chmod', '+x', executable])
 
 
@@ -271,6 +284,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
     print()
     print("INITIAL ANALYSIS OF EXECUTABLE TOOK", round(time.time() - start_analyze, 2), "SECONDS")
 
+    work_dir = make_work_dir(executable)
+    new_executable = os.path.join(work_dir, "new_executable")
     start_fuzz = time.time()
     mutant_no = 0
     analysis_data = []
@@ -288,8 +303,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 subprocess.call(post_initial_cmd, shell=True)
 
         if reachability_check_cmd is not None:
-            func_reachability_filename = "/tmp/func_reachability_executable"
-            reachability_filename = "/tmp/reachability_executable"
+            func_reachability_filename = os.path.join(work_dir, "func_reachability_executable")
+            reachability_filename = os.path.join(work_dir, "reachability_executable")
             reachability_checks = 0.0
             reachability_hits = 0.0
         else:
@@ -308,7 +323,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             if use_saved_mutants is None:
                 print(round(time.time() - start_fuzz, 2), "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
                 # make a new mutant of the executable; rename avoids hitting a busy executable
-                (functions, locs, meta) = mutate.mutate_from(executable_code, executable_jumps, function_reach, "/tmp/new_executable",
+                (functions, locs, meta) = mutate.mutate_from(executable_code, executable_jumps, function_reach, new_executable,
                                                              order=order, reachability_filename=reachability_filename,
                                                              func_reachability_filename=func_reachability_filename,
                                                              save_mutants=save_mutants, save_executables=save_executables, save_count=mutant_no,
@@ -329,7 +344,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     metadata = metadatas[(mutant_no - 1) % len(metadatas)]
                 else:
                     metadata = random.choice(metadatas)
-                (functions, locs, meta) = mutate.apply_mutant_metadata(executable_code, executable_jumps, function_reach, metadata, "/tmp/new_executable",
+                (functions, locs, meta) = mutate.apply_mutant_metadata(executable_code, executable_jumps, function_reach, metadata, new_executable,
                                                                        visited_mutants)
             mutant_ok = True
             if not functions and not locs: # Can only happen if apply fails
@@ -349,7 +364,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     os.rename(func_reachability_filename, executable)
                     subprocess.check_call(['chmod', '+x', executable])
                     r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout, verbose)
-                    restore_executable(executable, executable_code)
+                    restore_executable(executable, executable_code, work_dir)
                 if r == 0:
                     print("FUNCTION ITSELF IS NOT REACHABLE (RETURN CODE 0)")
                     mutant_ok = False
@@ -368,7 +383,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                         os.rename(reachability_filename, executable)
                         subprocess.check_call(['chmod', '+x', executable])
                         r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout, verbose)
-                        restore_executable(executable, executable_code)
+                        restore_executable(executable, executable_code, work_dir)
                     if r == 0:
                         print("MUTANT IS NOT REACHABLE (RETURN CODE 0)")
                         for loc in locs:
@@ -390,7 +405,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 print ("RUNNING COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
                        str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
             if mutant_ok:
-                os.rename("/tmp/new_executable", executable)
+                os.rename(new_executable, executable)
                 subprocess.check_call(['chmod', '+x', executable])
                 if prune_mutant_cmd is not None:
                     if verbose:
@@ -442,18 +457,18 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 print("RUNNING MEAN TIME FOR MUTANT EVALUATION:", round(sum(analysis_times) / len(analysis_times), 2), "SECONDS")
 
                 if post_mutant_cmd is not None:
-                    restore_executable(executable, executable_code) # Might need original for post
+                    restore_executable(executable, executable_code, work_dir) # Might need original for post
                     print("RUNNING POST-MUTANT COMMAND")
                     silent_run_with_timeout(post_mutant_cmd, post_mutant_timeout, verbose)
                 if status_cmd is not None:
-                    restore_executable(executable, executable_code) # Might need for status
+                    restore_executable(executable, executable_code, work_dir) # Might need for status
                     print("STATUS:")
                     subprocess.call(status_cmd, shell=True)
 
         if (not score) and (fraction_mutant < 1.0):
             print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
-            restore_executable(executable, executable_code)
+            restore_executable(executable, executable_code, work_dir)
             silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz), verbose)
             print("COMPLETED AFTER", round(time.time() - start_fuzz, 2), "SECONDS")
             if status_cmd is not None:
@@ -517,4 +532,5 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
 
     finally:
         # always restore the original binary!
-        restore_executable(executable, executable_code)
+        restore_executable(executable, executable_code, work_dir)
+        shutil.rmtree(work_dir, ignore_errors=True)
