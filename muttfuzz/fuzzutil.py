@@ -38,7 +38,36 @@ def restore_executable(executable, executable_code):
     subprocess.check_call(['chmod', '+x', executable])
 
 
-def silent_run_with_timeout(cmd, timeout, verbose, zero_timeout=False):
+def kill_process_group(P, grace=10.0):
+    """SIGTERM the process group led by Popen object P (started with setsid), wait up to
+    `grace` seconds for every process in it to exit, then SIGKILL whatever is left.
+    Returning only once the group is gone matters for fuzzers that lock their output
+    directory (afl-fuzz flock()s it): starting the next run while the previous one is
+    still shutting down makes the new one fail."""
+    pgid = P.pid
+
+    def group_alive():
+        P.poll()  # reap our direct child, or it lingers as a zombie in the group
+        try:
+            os.killpg(pgid, 0)
+            return True
+        except ProcessLookupError:
+            return False
+
+    for sig, wait in ((signal.SIGTERM, grace), (signal.SIGKILL, 5.0)):
+        try:
+            os.killpg(pgid, sig)
+        except ProcessLookupError:
+            break
+        deadline = time.time() + wait
+        while time.time() < deadline and group_alive():
+            time.sleep(0.05)
+        if not group_alive():
+            break
+    P.poll()
+
+
+def silent_run_with_timeout(cmd, timeout, verbose, zero_timeout=False, kill_grace=10.0):
     # Allow functions instead of commands, for use as a library from a script
     if verbose:
         print("*" * 30)
@@ -58,6 +87,7 @@ def silent_run_with_timeout(cmd, timeout, verbose, zero_timeout=False):
         print("EXECUTING", cmd)
     start_P = time.time()
     timed_out = False
+    P = None
     try:
         with open("cmd_errors.txt", 'w') as cmd_errors:
             P = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid,
@@ -66,7 +96,7 @@ def silent_run_with_timeout(cmd, timeout, verbose, zero_timeout=False):
                 time.sleep(min(0.5, timeout / 10.0)) # Allow for small timeouts
             if P.poll() is None:
                 print("KILLING SUBPROCESS DUE TO TIMEOUT")
-                os.killpg(os.getpgid(P.pid), signal.SIGTERM)
+                kill_process_group(P, kill_grace)
                 timed_out = True
         with open("cmd_errors.txt", 'r') as cmd_errors:
             try:
@@ -77,9 +107,9 @@ def silent_run_with_timeout(cmd, timeout, verbose, zero_timeout=False):
             print("OUTPUT (TRUNCATED TO LAST 20 LINES):")
             print("\n".join(cmd_errors_out.split("\n")[-20:]))
     finally:
-        if P.poll() is None:
+        if (P is not None) and (P.poll() is None):
             print("KILLING SUBPROCESS DUE TO TIMEOUT")
-            os.killpg(os.getpgid(P.pid), signal.SIGTERM)
+            kill_process_group(P, kill_grace)
             timed_out = True
     if verbose:
         if not timed_out:
