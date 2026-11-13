@@ -307,6 +307,14 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             reachability_filename = os.path.join(work_dir, "reachability_executable")
             reachability_checks = 0.0
             reachability_hits = 0.0
+            # Sanity check: on the unmutated executable the check should pass (return 0). If it
+            # does not (e.g. the corpus contains an input that crashes the real program, or the
+            # check times out), every mutant will look reachable and nothing is pruned.
+            r = silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout, verbose)
+            if r != 0:
+                print("WARNING: REACHABILITY CHECK FAILS (RETURN CODE " + str(r) + ") ON THE UNMUTATED EXECUTABLE;")
+                print("  every mutant will look reachable. Check for corpus inputs that crash or hang the")
+                print("  original program, or a --reachability_check_timeout that is too short.")
         else:
             func_reachability_filename = None
             reachability_filename = None
@@ -323,12 +331,18 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             if use_saved_mutants is None:
                 print(round(time.time() - start_fuzz, 2), "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
                 # make a new mutant of the executable; rename avoids hitting a busy executable
-                (functions, locs, meta) = mutate.mutate_from(executable_code, executable_jumps, function_reach, new_executable,
-                                                             order=order, reachability_filename=reachability_filename,
-                                                             func_reachability_filename=func_reachability_filename,
-                                                             save_mutants=save_mutants, save_executables=save_executables, save_count=mutant_no,
-                                                             avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
-                                                             visited_mutants=visited_mutants, unreach_cache=unreach_cache)
+                try:
+                    (functions, locs, meta) = mutate.mutate_from(executable_code, executable_jumps, function_reach, new_executable,
+                                                                 order=order, reachability_filename=reachability_filename,
+                                                                 func_reachability_filename=func_reachability_filename,
+                                                                 save_mutants=save_mutants, save_executables=save_executables, save_count=mutant_no,
+                                                                 avoid_repeats=avoid_repeats, repeat_retries=repeat_retries,
+                                                                 visited_mutants=visited_mutants, unreach_cache=unreach_cache)
+                except (RuntimeError, IndexError) as e:
+                    # every jump is known unreachable (or there are none): stop the mutant
+                    # phase rather than crash and lose the rest of the budget
+                    print("NO MUTANT CAN BE GENERATED (" + str(e) + "); ENDING MUTANT PHASE")
+                    break
                 if stop_on_repeat and max(visited_mutants.values()) > 1:
                     print("FORCED TO REPEAT A MUTANT, STOPPING ANALYSIS")
                     if save_mutants is not None:
@@ -510,7 +524,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             print("TOTAL OF", unreach_funcs, "FUNCTIONS WITH", unreach_branches, "BRANCHES ARE UNREACHABLE")
             print()
 
-        if reachability_check_cmd is not None:
+        if (reachability_check_cmd is not None) and (reachability_checks > 0):
             print("FINAL COVERAGE OVER", int(reachability_checks), "MUTANTS:",
                   str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
         if score:
@@ -521,10 +535,12 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 print("NO MUTANTS EXECUTED!")
 
         visits = visited_mutants.values()
-        print("MAXIMUM VISITS TO A MUTANT:", max(visits))
-        print("MEAN VISITS TO A MUTANT:", round(sum(visits) / (len(visits) * 1.0), 2))
+        if visits:
+            print("MAXIMUM VISITS TO A MUTANT:", max(visits))
+            print("MEAN VISITS TO A MUTANT:", round(sum(visits) / (len(visits) * 1.0), 2))
         analysis_times = list(map(lambda x:x[1], analysis_data))
-        print("MEAN TIME FOR MUTANT EVALUATION:", round(sum(analysis_times) / len(analysis_times), 2), "SECONDS")
+        if analysis_times:
+            print("MEAN TIME FOR MUTANT EVALUATION:", round(sum(analysis_times) / len(analysis_times), 2), "SECONDS")
         if save_results is not None:
             with open(save_results, 'w') as f:
                 for d in analysis_data:
