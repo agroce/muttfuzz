@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import glob
 import os
 import random
@@ -292,7 +292,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
     try:
         if initial_fuzz_cmd is not None:
             print("=" * 10,
-                  datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                  datetime.fromtimestamp(time.time(), timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
                   "=" * 10)
             print("RUNNING INITIAL FUZZING...")
             silent_run_with_timeout(initial_fuzz_cmd, initial_budget, verbose)
@@ -326,7 +326,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             print()
             print()
             print("=" * 30,
-                  datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'),
+                  datetime.fromtimestamp(time.time(), timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
                   "=" * 30)
             if use_saved_mutants is None:
                 print(round(time.time() - start_fuzz, 2), "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
@@ -480,7 +480,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     subprocess.call(status_cmd, shell=True)
 
         if (not score) and (fraction_mutant < 1.0):
-            print(datetime.utcfromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            print(datetime.fromtimestamp(time.time(), timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
             print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
             restore_executable(executable, executable_code, work_dir)
             silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz), verbose)
