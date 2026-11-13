@@ -19,6 +19,17 @@ HALT_OP = HALT[0]
 # known markers for fuzzer/compiler injected instrumentation/etc.
 INSTRUMENTATION_SET = ["__afl", "__asan", "__ubsan", "__sanitizer", "__lsan", "__sancov", "AFL_"]
 INSTRUMENTATION_SET.extend(["DeepState", "deepstate"])
+# AFL++ (4.x/5.x) runtime functions linked into instrumented binaries
+INSTRUMENTATION_SET.extend(["__cmplog", "cmplog_", "__valueprofile", "vp_runtime", "ijon_",
+                            "__early_forkserver", "__decide_deferred_forkserver"])
+# ASan's per-register memory-check thunks (.check_load_add_1_RAX etc.)
+INSTRUMENTATION_SET.extend([".check_load_", ".check_store_"])
+# Source files of fuzzer/sanitizer runtimes and fuzzing drivers: code whose line info points
+# here is never mutated (AFL++ builds parts of its runtime and libAFLDriver with debug info,
+# and they contain ordinary static functions like at_exit or main)
+SOURCE_INSTRUMENTATION_SET = ["afl-compiler-rt", "afl-llvm-rt", "aflpp_driver", "aflpp_qemu_driver",
+                              "AFLplusplus/include/", "compiler-rt/lib/", "/libfuzzer/", "/FuzzerMain.cpp",
+                              "/FuzzerDriver.cpp", "/cmplog.h"]
 
 def sans_arguments(s):
     pos = len(s) - 1
@@ -35,7 +46,15 @@ def sans_arguments(s):
     return s
 
 def get_jumps(filename, only_mutate=None, avoid_mutating=None, source_only_mutate=None, source_avoid_mutating=None,
-              mutate_standard_libraries=False):
+              mutate_standard_libraries=False, debug_info_only=False):
+    """
+    Find mutable jumps. Source-based filters (source_only_mutate, source_avoid_mutating) and
+    debug_info_only work on the line-number markers objdump -l prints, which only exist for
+    code compiled with debug info. That state is reset at every function boundary, so a
+    function without line info never inherits the source location of the function before it.
+    With source_only_mutate (or debug_info_only), a function without line info is not mutated:
+    that is typically fuzzer or sanitizer runtime code.
+    """
     if only_mutate is None:
         only_mutate = []
     if avoid_mutating is None:
@@ -59,12 +78,16 @@ def get_jumps(filename, only_mutate=None, avoid_mutating=None, source_only_mutat
 
     last_source = ""
     source_avoid = False
+    has_line_info = False
+    source_instrumentation = False
 
     for line in output.split("\n"):
         try:
             if line[0] == "/" and ":" in line: # hit a line number
                 last_source = line
+                has_line_info = True
                 source_avoid = False
+                source_instrumentation = any(m in line for m in SOURCE_INSTRUMENTATION_SET)
 
                 for s in source_avoid_mutating:
                     if s in last_source:
@@ -81,6 +104,11 @@ def get_jumps(filename, only_mutate=None, avoid_mutating=None, source_only_mutat
 
             if "File Offset" in line and line[-1] == ":":
                 avoid = False
+                # new function: forget the previous function's source location
+                last_source = ""
+                has_line_info = False
+                source_instrumentation = False
+                source_avoid = source_only_mutate != []
                 function_name = line.split(" ", 1)[1].split(" (File Offset", 1)[0]
                 just_name = sans_arguments(function_name)
                 just_name = just_name[1:]
@@ -131,6 +159,10 @@ def get_jumps(filename, only_mutate=None, avoid_mutating=None, source_only_mutat
                     first_inst = False
 
                 if source_avoid:
+                    continue
+                if debug_info_only and not has_line_info:
+                    continue
+                if source_instrumentation:
                     continue
 
                 found_instrumentation = False

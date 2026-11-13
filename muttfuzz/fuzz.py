@@ -34,6 +34,8 @@ def parse_args():
                         help='file with a list of source file patterns (one per line) that are to be mutated')
     parser.add_argument('--source_avoid_mutating_file', metavar='filename', type=str, default=None,
                         help='file with a list of source file patterns not to mutate')
+    parser.add_argument('--debug_info_only', action='store_true',
+                        help='only mutate functions that have debug (line number) info; skips most fuzzer/sanitizer runtime code')
     parser.add_argument('--reachability_check_cmd', type=str, default=None,
                         help='command to check reachability; should return non-zero if some inputs crash')
     parser.add_argument('--reachability_check_timeout', type=float, default=2.0,
@@ -146,7 +148,8 @@ def main():
                                config.save_results,
                                config.verbose,
                                config.skip_default_avoid,
-                               config.mutate_standard_libraries)
+                               config.mutate_standard_libraries,
+                               config.debug_info_only)
 
 
 

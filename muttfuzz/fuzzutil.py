@@ -130,7 +130,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       save_results=None,
                       verbose=False,
                       skip_default_avoid=False,
-                      mutate_standard_libraries=False):
+                      mutate_standard_libraries=False,
+                      debug_info_only=False):
     if only_mutate is None:
         only_mutate = []
     if avoid_mutating is None:
@@ -210,8 +211,14 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
     sys.stdout.flush()
     (executable_jumps, function_map, function_reach) = mutate.get_jumps(executable, only_mutate, avoid_mutating,
                                                                         source_only_mutate, source_avoid_mutating,
-                                                                        mutate_standard_libraries)
+                                                                        mutate_standard_libraries, debug_info_only)
     print("FOUND", len(executable_jumps), "MUTABLE JUMPS IN", len(function_map), "FUNCTIONS")
+    no_line_info = len([j for j in executable_jumps.values() if j["source"] == ""])
+    if (not debug_info_only) and (source_only_mutate == []) and \
+       (0 < no_line_info < len(executable_jumps)) and (no_line_info > 0.25 * len(executable_jumps)):
+        print("WARNING:", no_line_info, "OF THESE JUMPS ARE IN FUNCTIONS WITHOUT DEBUG INFO, WHILE OTHERS HAVE IT;")
+        print("  in a binary built with -g these are usually sanitizer/fuzzer runtime code.")
+        print("  Consider --debug_info_only or --source_only_mutate to mutate only the target's code.")
     print("JUMPS BY FUNCTION:")
     if reachability_check_cmd is not None:
         function_coverage = {}
