@@ -69,7 +69,7 @@ This example shows how to use MuttFuzz with AFL (or AFLplusplus) but using it wi
 ```
 cd ~/examples/deepstate-boyer-moore-horspool/
 export FUZZ_DIR=muttfuzz_bmh
-muttfuzz "deepstate-afl ./testhorspool_AFL -o $FUZZ_DIR" ./testhorspool_AFL --budget 86400 --time_per_mutant 600 --fraction_mutant 90 --initial_fuzz_cmd "rm -rf $FUZZ_DIR; deepstate-afl ./testhorspool_AFL -o $FUZZ_DIR" --initial_budget 3600
+muttfuzz "deepstate-afl ./testhorspool_AFL -o $FUZZ_DIR" ./testhorspool_AFL --budget 86400 --time_per_mutant 600 --fraction_mutant 0.90 --initial_fuzz_cmd "rm -rf $FUZZ_DIR; deepstate-afl ./testhorspool_AFL -o $FUZZ_DIR" --initial_budget 3600
 ```
 
 **Q**: Why is fuzzing mutants helpful?
