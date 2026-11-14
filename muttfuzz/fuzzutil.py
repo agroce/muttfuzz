@@ -11,6 +11,7 @@ import time
 from contextlib import contextmanager
 
 from muttfuzz import mutate
+from muttfuzz import live as live_mode
 
 
 class TimeoutException(Exception):
@@ -174,7 +175,11 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       verbose=False,
                       skip_default_avoid=False,
                       mutate_standard_libraries=False,
-                      debug_info_only=False):
+                      debug_info_only=False,
+                      live=False,
+                      kill_grace=10.0):
+    if live and score:
+        raise ValueError("--live cannot be used with --score (mutation score needs one run per mutant)")
     if only_mutate is None:
         only_mutate = []
     if avoid_mutating is None:
@@ -289,8 +294,45 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
     start_fuzz = time.time()
     mutant_no = 0
     analysis_data = []
+    live_fuzzer = None
+    patcher = None
+
+    def live_wait(seconds, patches=None):
+        """Let the live fuzzer run; False if it has exited. With patches, re-apply them about
+        once a second, so processes the fuzzer (re)starts from the file on disk during the
+        window (e.g. libFuzzer restarted by a wrapper after a crash) also run the mutant."""
+        end = time.time() + seconds
+        last_check = time.time()
+        while time.time() < end:
+            if live_fuzzer.poll() is not None:
+                print("LIVE FUZZER EXITED WITH RETURN CODE", live_fuzzer.returncode)
+                return False
+            time.sleep(min(0.5, max(0.0, end - time.time())))
+            if patches and time.time() - last_check >= 1.0:
+                patcher.apply(patches, passes=1)
+                last_check = time.time()
+        return live_fuzzer.poll() is None
+
     try:
-        if initial_fuzz_cmd is not None:
+        if live:
+            # one fuzzer run for the whole budget; mutants are applied to its processes
+            live_cmd = initial_fuzz_cmd if initial_fuzz_cmd is not None else fuzzer_cmd
+            print("=" * 10,
+                  datetime.fromtimestamp(time.time(), timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
+                  "=" * 10)
+            print("STARTING LIVE FUZZER (MUTANTS WILL BE SWITCHED IN PLACE):", live_cmd)
+            with open("cmd_errors_live.txt", 'w') as live_errors:
+                live_fuzzer = subprocess.Popen(live_cmd, shell=True, preexec_fn=os.setsid,
+                                               stdout=subprocess.DEVNULL, stderr=live_errors)
+            patcher = live_mode.LivePatcher(executable, live_fuzzer.pid, verbose)
+            print("RUNNING INITIAL FUZZING...")
+            live_wait(initial_budget)
+            if status_cmd is not None:
+                print("INITIAL STATUS:")
+                subprocess.call(status_cmd, shell=True)
+            if post_initial_cmd is not None:
+                subprocess.call(post_initial_cmd, shell=True)
+        elif initial_fuzz_cmd is not None:
             print("=" * 10,
                   datetime.fromtimestamp(time.time(), timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
                   "=" * 10)
@@ -419,8 +461,14 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 print ("RUNNING COVERAGE ESTIMATE OVER", int(reachability_checks), "MUTANTS:",
                        str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")
             if mutant_ok:
-                os.rename(new_executable, executable)
-                subprocess.check_call(['chmod', '+x', executable])
+                if live:
+                    with open(new_executable, 'rb') as f:
+                        live_patches = live_mode.diff(executable_code, f.read())
+                if (not live) or (prune_mutant_cmd is not None):
+                    # (in live mode the file on disk stays the original except for pruning, so
+                    # processes the fuzzer starts meanwhile never pick up a stale mutant)
+                    os.rename(new_executable, executable)
+                    subprocess.check_call(['chmod', '+x', executable])
                 if prune_mutant_cmd is not None:
                     if verbose:
                         print()
@@ -430,6 +478,9 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     if r != 0:
                         print("PRUNING CHECK FAILED WITH RETURN CODE", r)
                         mutant_ok = False
+            if live:
+                # the running fuzzer gets the mutant in memory; keep the original on disk
+                restore_executable(executable, executable_code, work_dir)
             if (save_mutants is not None) and (not mutant_ok):
                 # Don't keep unreachable mutants
                 subprocess.call("rm " + save_mutants + "/*_" + str(mutant_no) + ".*", shell=True)
@@ -438,7 +489,24 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 print("FUZZING/EVALUATING MUTANT...")
                 sys.stdout.flush()
                 start_run = time.time()
-                r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant, verbose, zero_timeout=no_timeout_kills)
+                if live:
+                    n_procs = 0
+                    give_up = time.time() + 10.0  # the fuzzer may still be starting up
+                    while n_procs == 0 and live_fuzzer.poll() is None and time.time() < give_up:
+                        n_procs = patcher.apply(live_patches)
+                        if n_procs == 0:
+                            time.sleep(0.2)
+                    if n_procs == 0:
+                        print("LIVE FUZZER IS NOT RUNNING THE EXECUTABLE; ENDING MUTANT PHASE")
+                        break
+                    print("SWITCHED", len(live_patches), "PATCHED LOCATION(S) INTO", n_procs, "LIVE PROCESS(ES)")
+                    still_running = live_wait(time_per_mutant, live_patches)
+                    patcher.apply(live_mode.inverse(executable_code, live_patches))
+                    r = 0
+                    if not still_running:
+                        break
+                else:
+                    r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant, verbose, zero_timeout=no_timeout_kills)
                 print("FINISHED IN", round(time.time() - start_run, 2), "SECONDS")
                 analysis_data.append((mutant_name, round(time.time() - start_run, 2), r))
                 if score:
@@ -479,11 +547,15 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     print("STATUS:")
                     subprocess.call(status_cmd, shell=True)
 
-        if (not score) and (fraction_mutant < 1.0):
+        if (not score) and (fraction_mutant < 1.0 or live):
             print(datetime.fromtimestamp(time.time(), timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
             print(round(time.time() - start_fuzz, 2), "ELAPSED: STARTING FINAL FUZZ")
             restore_executable(executable, executable_code, work_dir)
-            silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz), verbose)
+            if live:
+                if live_fuzzer.poll() is None:
+                    live_wait(budget - (time.time() - start_fuzz))
+            else:
+                silent_run_with_timeout(fuzzer_cmd, budget - (time.time() - start_fuzz), verbose)
             print("COMPLETED AFTER", round(time.time() - start_fuzz, 2), "SECONDS")
             if status_cmd is not None:
                 print("FINAL STATUS:")
@@ -547,6 +619,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                     f.write('"' + d[0] + '",' + str(d[1]) + "," + str(d[2]) + "\n")
 
     finally:
+        if live_fuzzer is not None and live_fuzzer.poll() is None:
+            kill_process_group(live_fuzzer, kill_grace)
         # always restore the original binary!
         restore_executable(executable, executable_code, work_dir)
         shutil.rmtree(work_dir, ignore_errors=True)
