@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import glob
 import os
 import random
+import re
 import shutil
 import signal
 import subprocess
@@ -12,6 +13,7 @@ from contextlib import contextmanager
 
 from muttfuzz import mutate
 from muttfuzz import live as live_mode
+from muttfuzz import frontier as frontier_mode
 
 
 class TimeoutException(Exception):
@@ -177,9 +179,16 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       mutate_standard_libraries=False,
                       debug_info_only=False,
                       live=False,
-                      kill_grace=10.0):
+                      kill_grace=10.0,
+                      frontier_check=False,
+                      frontier_probes=30,
+                      progress_cmd=None,
+                      max_time_per_mutant=None,
+                      progress_window=None):
     if live and score:
         raise ValueError("--live cannot be used with --score (mutation score needs one run per mutant)")
+    if frontier_check and reachability_check_cmd is None:
+        raise ValueError("--frontier_check needs --reachability_check_cmd (it runs the same corpus-replay command)")
     if only_mutate is None:
         only_mutate = []
     if avoid_mutating is None:
@@ -313,6 +322,66 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                 last_check = time.time()
         return live_fuzzer.poll() is None
 
+    def read_progress():
+        """Last number printed by progress_cmd (e.g. a corpus size), or None."""
+        try:
+            out = subprocess.run(progress_cmd, shell=True, capture_output=True, text=True,
+                                 timeout=30, check=False).stdout
+        except (subprocess.SubprocessError, OSError):
+            return None
+        nums = re.findall(r"-?[0-9]+(?:[.][0-9]+)?", out)
+        return float(nums[-1]) if nums else None
+
+    def adaptive_run(wait_fn, phase_end):
+        """Adaptive dwell time: run the mutant for at least time_per_mutant, then keep extending
+        it one progress window at a time while the progress command reported an increase during
+        the last window, up to max_time_per_mutant and the end of the mutant phase.
+        wait_fn(seconds) runs the fuzzer for that long, returning False if it exited.
+        Returns False if the fuzzer exited."""
+        window = progress_window if progress_window is not None else time_per_mutant
+        max_t = max_time_per_mutant if max_time_per_mutant is not None else 4 * time_per_mutant
+        start = time.time()
+        last = read_progress()
+        progressed = False
+        while time.time() - start < time_per_mutant:
+            if not wait_fn(min(window, time_per_mutant - (time.time() - start))):
+                return False
+            now = read_progress()
+            progressed = (now is not None) and (last is not None) and (now > last)
+            last = now
+        while progressed:
+            remaining = min(max_t - (time.time() - start), phase_end - time.time())
+            if remaining <= 1:
+                print("MUTANT REACHED ITS TIME LIMIT WHILE STILL MAKING PROGRESS")
+                break
+            print("EXTENDING MUTANT: PROGRESS", last, "IN LAST WINDOW")
+            if not wait_fn(min(window, remaining)):
+                return False
+            now = read_progress()
+            progressed = (now is not None) and (last is not None) and (now > last)
+            last = now
+        print("MUTANT RAN FOR", round(time.time() - start, 2), "SECONDS")
+        return True
+
+    def process_wait(P):
+        def wait_fn(seconds):
+            end = time.time() + seconds
+            while time.time() < end:
+                if P.poll() is not None:
+                    return False
+                time.sleep(min(0.5, max(0.0, end - time.time())))
+            return P.poll() is None
+        return wait_fn
+
+    reachability_checks = 0.0
+    reachability_hits = 0.0
+    frontier_finder = None
+    if frontier_check:
+        frontier_finder = frontier_mode.FrontierFinder(
+            executable_code, executable_jumps, function_reach, executable, work_dir,
+            lambda: silent_run_with_timeout(reachability_check_cmd, reachability_check_timeout, verbose),
+            unreach_cache=unreach_cache)
+
     try:
         if live:
             # one fuzzer run for the whole budget; mutants are applied to its processes
@@ -370,8 +439,36 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             print("=" * 30,
                   datetime.fromtimestamp(time.time(), timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
                   "=" * 30)
-            if use_saved_mutants is None:
+            frontier_pick = None
+            if (use_saved_mutants is None) and (frontier_finder is not None):
                 print(round(time.time() - start_fuzz, 2), "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
+                probes_before = frontier_finder.probes_run
+                frontier_pick = frontier_finder.find(mutant_no, frontier_probes)
+                if frontier_pick is None:
+                    print("NO FRONTIER JUMP FOUND IN", frontier_finder.probes_run - probes_before,
+                          "PROBES; USING A RANDOM MUTANT")
+                else:
+                    (loc, status) = frontier_pick
+                    jump = executable_jumps[loc]
+                    new_data = frontier_finder.mutant(loc, status)
+                    print("FRONTIER JUMP (" + str(frontier_finder.probes_run - probes_before), "PROBES): THE CORPUS",
+                          "NEVER TAKES" if status == "not_taken" else "ALWAYS TAKES", "THIS JUMP")
+                    print("MUTATING JUMP IN", jump["function_name"], "WITH ORIGINAL OPCODE", jump["opcode"])
+                    print("ORIGINAL CODE:", jump["code"])
+                    print("AT LINE:", jump["source"])
+                    print("CHANGING TO", "jmp" if status == "not_taken" else "NOPS")
+                    new_code = bytearray(executable_code)
+                    new_code[loc:loc + len(new_data)] = new_data
+                    function = jump["function_name"]
+                    meta = function + "\n" + str(loc - function_reach[function]) + "\n" + str(len(new_data)) + "\n"
+                    meta += "".join(str(int(b)) + "\n" for b in new_data)
+                    mutate.write_files(new_code, meta, None, None, new_executable, save_mutants=save_mutants,
+                                       save_executables=save_executables, save_count=mutant_no)
+                    functions, locs = [function], [loc]
+                    visited_mutants[(loc, new_data)] = visited_mutants.get((loc, new_data), 0) + 1
+            if (use_saved_mutants is None) and (frontier_pick is None):
+                if frontier_finder is None:
+                    print(round(time.time() - start_fuzz, 2), "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
                 # make a new mutant of the executable; rename avoids hitting a busy executable
                 try:
                     (functions, locs, meta) = mutate.mutate_from(executable_code, executable_jumps, function_reach, new_executable,
@@ -391,7 +488,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                         # Don't keep repeated mutants
                         subprocess.call("rm " + save_mutants + "/*_" + str(mutant_no) + ".*", shell=True)
                     break
-            else:
+            elif use_saved_mutants is not None:
                 print(round(time.time() - start_fuzz, 2), "ELAPSED: APPLYING MUTANT #" + str(mutant_no))
                 if stop_on_repeat and ((mutant_no - 1) >= len(metadatas)):
                     print("FORCED TO REPEAT A MUTANT, STOPPING ANALYSIS")
@@ -406,7 +503,7 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             if not functions and not locs: # Can only happen if apply fails
                 mutant_ok = False
             mutant_name = meta.replace("\n", "::")
-            if reachability_check_cmd is not None:
+            if (reachability_check_cmd is not None) and (frontier_pick is None):
                 if verbose:
                     print()
                     print("=" * 40)
@@ -500,11 +597,26 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                         print("LIVE FUZZER IS NOT RUNNING THE EXECUTABLE; ENDING MUTANT PHASE")
                         break
                     print("SWITCHED", len(live_patches), "PATCHED LOCATION(S) INTO", n_procs, "LIVE PROCESS(ES)")
-                    still_running = live_wait(time_per_mutant, live_patches)
+                    if progress_cmd is not None:
+                        phase_end = start_fuzz + initial_budget + budget * fraction_mutant
+                        still_running = adaptive_run(lambda t: live_wait(t, live_patches), phase_end)
+                    else:
+                        still_running = live_wait(time_per_mutant, live_patches)
                     patcher.apply(live_mode.inverse(executable_code, live_patches))
                     r = 0
                     if not still_running:
                         break
+                elif (progress_cmd is not None) and (not score):
+                    phase_end = start_fuzz + initial_budget + budget * fraction_mutant
+                    with open("cmd_errors.txt", 'w') as cmd_errors:
+                        P = subprocess.Popen(fuzzer_cmd, shell=True, preexec_fn=os.setsid,
+                                             stdout=subprocess.DEVNULL, stderr=cmd_errors)
+                    try:
+                        adaptive_run(process_wait(P), phase_end)
+                    finally:
+                        if P.poll() is None:
+                            kill_process_group(P, kill_grace)
+                    r = 0
                 else:
                     r = silent_run_with_timeout(fuzzer_cmd, time_per_mutant, verbose, zero_timeout=no_timeout_kills)
                 print("FINISHED IN", round(time.time() - start_run, 2), "SECONDS")
@@ -596,6 +708,8 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             print("TOTAL OF", unreach_funcs, "FUNCTIONS WITH", unreach_branches, "BRANCHES ARE UNREACHABLE")
             print()
 
+        if frontier_finder is not None:
+            print("FRONTIER PROBES RUN:", frontier_finder.probes_run)
         if (reachability_check_cmd is not None) and (reachability_checks > 0):
             print("FINAL COVERAGE OVER", int(reachability_checks), "MUTANTS:",
                   str(round((reachability_hits / reachability_checks) * 100.0, 2)) + "%")

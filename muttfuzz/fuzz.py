@@ -34,6 +34,18 @@ def parse_args():
                         help='file with a list of source file patterns (one per line) that are to be mutated')
     parser.add_argument('--source_avoid_mutating_file', metavar='filename', type=str, default=None,
                         help='file with a list of source file patterns not to mutate')
+    parser.add_argument('--frontier_check', action='store_true',
+                        help='choose mutants at the coverage frontier: jumps the corpus reaches but only ever takes one '
+                             'way (found with HALT probes run by --reachability_check_cmd), mutated to force the other way')
+    parser.add_argument('--frontier_probes', type=int, default=30,
+                        help='max corpus runs spent looking for a frontier jump per mutant before using a random one (default 30)')
+    parser.add_argument('--progress_cmd', type=str, default=None,
+                        help='adaptive time per mutant: a command printing a number that grows when the fuzzer makes progress '
+                             '(e.g. corpus size); a mutant runs --time_per_mutant seconds, then is extended while it progresses')
+    parser.add_argument('--max_time_per_mutant', type=float, default=None,
+                        help='with --progress_cmd: upper limit on one mutant\'s time (default 4 x --time_per_mutant)')
+    parser.add_argument('--progress_window', type=float, default=None,
+                        help='with --progress_cmd: how often progress is checked / extension step (default --time_per_mutant)')
     parser.add_argument('--live', action='store_true',
                         help='keep one fuzzer run going for the whole budget and switch mutants into its running '
                              'processes (via /proc/<pid>/mem) instead of restarting it for each mutant; '
@@ -154,7 +166,13 @@ def main():
                                config.skip_default_avoid,
                                config.mutate_standard_libraries,
                                config.debug_info_only,
-                               config.live)
+                               config.live,
+                               10.0,
+                               config.frontier_check,
+                               config.frontier_probes,
+                               config.progress_cmd,
+                               config.max_time_per_mutant,
+                               config.progress_window)
 
 
 
