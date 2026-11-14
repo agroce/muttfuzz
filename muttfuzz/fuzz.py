@@ -38,7 +38,10 @@ def parse_args():
                         help='choose mutants at the coverage frontier: jumps the corpus reaches but only ever takes one '
                              'way (found with HALT probes run by --reachability_check_cmd), mutated to force the other way')
     parser.add_argument('--frontier_probes', type=int, default=30,
-                        help='max corpus runs spent looking for a frontier jump per mutant before using a random one (default 30)')
+                        help='max corpus runs spent looking for a frontier jump per mutant before using a random reachable one (default 30)')
+    parser.add_argument('--frontier_fraction', type=float, default=1.0,
+                        help='with --frontier_check: fraction of mutants chosen at the frontier; the rest are random '
+                             'reachable mutants, chosen without a frontier search (default 1.0)')
     parser.add_argument('--progress_cmd', type=str, default=None,
                         help='adaptive time per mutant: a command printing a number that grows when the fuzzer makes progress '
                              '(e.g. corpus size); a mutant runs --time_per_mutant seconds, then is extended while it progresses')
@@ -172,7 +175,8 @@ def main():
                                config.frontier_probes,
                                config.progress_cmd,
                                config.max_time_per_mutant,
-                               config.progress_window)
+                               config.progress_window,
+                               config.frontier_fraction)
 
 
 

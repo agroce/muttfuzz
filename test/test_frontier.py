@@ -84,3 +84,26 @@ def test_muttfuzz_frontier_end_to_end(tmp_path):
     assert "FRONTIER JUMP" in r.stdout and "ALWAYS TAKES THIS JUMP" in r.stdout
     assert "RARE" in open(out).read()
     assert os.path.exists(exe)
+
+
+def test_frontier_fraction_zero_skips_search(tmp_path):
+    _exe, _corpus = _setup(tmp_path)
+    out = str(tmp_path / "rare.txt")
+    r = subprocess.run('muttfuzz "FRONTIER_OUT=%s ./frontier_toy corpus/a" frontier_toy --only_mutate check '
+                       '--frontier_check --frontier_fraction 0 --reachability_check_cmd "./frontier_toy corpus/*" '
+                       '--budget 4 --time_per_mutant 1 --fraction_mutant 0.8' % out,
+                       shell=True, cwd=tmp_path, capture_output=True, text=True, timeout=120, check=False)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "NOT SEARCHING THE FRONTIER" in r.stdout
+    assert "FRONTIER JUMP (" not in r.stdout
+    assert "CHECKING REACHABILITY" in r.stdout or "REACHABLE" in r.stdout
+
+
+def test_frontier_fraction_range(tmp_path):
+    _setup(tmp_path)
+    r = subprocess.run('muttfuzz "./frontier_toy corpus/a" frontier_toy --only_mutate check '
+                       '--frontier_check --frontier_fraction 1.5 --reachability_check_cmd "./frontier_toy corpus/*" '
+                       '--budget 2 --time_per_mutant 1',
+                       shell=True, cwd=tmp_path, capture_output=True, text=True, timeout=60, check=False)
+    assert r.returncode != 0
+    assert "frontier_fraction" in r.stdout + r.stderr

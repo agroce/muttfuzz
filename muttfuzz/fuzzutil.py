@@ -184,11 +184,14 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
                       frontier_probes=30,
                       progress_cmd=None,
                       max_time_per_mutant=None,
-                      progress_window=None):
+                      progress_window=None,
+                      frontier_fraction=1.0):
     if live and score:
         raise ValueError("--live cannot be used with --score (mutation score needs one run per mutant)")
     if frontier_check and reachability_check_cmd is None:
         raise ValueError("--frontier_check needs --reachability_check_cmd (it runs the same corpus-replay command)")
+    if not 0.0 <= frontier_fraction <= 1.0:
+        raise ValueError("--frontier_fraction must be between 0 and 1")
     if only_mutate is None:
         only_mutate = []
     if avoid_mutating is None:
@@ -443,11 +446,17 @@ def fuzz_with_mutants(fuzzer_cmd, executable, budget, time_per_mutant, fraction_
             if (use_saved_mutants is None) and (frontier_finder is not None):
                 print(round(time.time() - start_fuzz, 2), "ELAPSED: GENERATING MUTANT #" + str(mutant_no))
                 probes_before = frontier_finder.probes_run
-                frontier_pick = frontier_finder.find(mutant_no, frontier_probes)
-                if frontier_pick is None:
-                    print("NO FRONTIER JUMP FOUND IN", frontier_finder.probes_run - probes_before,
-                          "PROBES; USING A RANDOM MUTANT")
+                if random.random() >= frontier_fraction:
+                    # --frontier_fraction: some mutants skip the frontier search and flip any
+                    # reachable jump (both sides covered, say), which may still change data
+                    print("NOT SEARCHING THE FRONTIER (--frontier_fraction", str(frontier_fraction) +
+                          "); USING A RANDOM REACHABLE MUTANT")
                 else:
+                    frontier_pick = frontier_finder.find(mutant_no, frontier_probes)
+                    if frontier_pick is None:
+                        print("NO FRONTIER JUMP FOUND IN", frontier_finder.probes_run - probes_before,
+                              "PROBES; USING A RANDOM REACHABLE MUTANT")
+                if frontier_pick is not None:
                     (loc, status) = frontier_pick
                     jump = executable_jumps[loc]
                     new_data = frontier_finder.mutant(loc, status)
